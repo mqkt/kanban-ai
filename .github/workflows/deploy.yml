@@ -63,19 +63,20 @@ jobs:
 
       # 5. Next.js アプリケーションの Docker イメージをビルドし、倉庫にプッシュします
       - name: Docker イメージのビルドとプッシュ
+        id: build
         run: |
           IMAGE_TAG="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.APP_NAME }}:${{ github.sha }}"
           IMAGE_LATEST="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.APP_NAME }}:latest"
-          
+
           # イメージのビルド
           docker build -t $IMAGE_TAG -t $IMAGE_LATEST .
-          
+
           # 倉庫（Artifact Registry）へプッシュ（アップロード）
           docker push $IMAGE_TAG
           docker push $IMAGE_LATEST
-          
-          # 以降のステップで使えるように環境変数にタグを登録
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+          # 以降のステップで使えるようにステップ出力として登録
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       # 6. 倉庫にアップロードした新しいイメージを使って、Cloud Run サーバーを更新します
       - name: Cloud Run へデプロイ
@@ -83,7 +84,7 @@ jobs:
         with:
           service: ${{ env.APP_NAME }}
           region: ${{ env.GCP_REGION }}
-          image: ${{ env.IMAGE_TAG }}
+          image: ${{ steps.build.outputs.image_tag }}
 
       # 7. デプロイ成功後に完了メッセージとURLを表示します
       - name: デプロイ完了の報告
