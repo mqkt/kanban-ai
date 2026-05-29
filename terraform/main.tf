@@ -18,7 +18,8 @@ variable "gcp_services" {
     "artifactregistry.googleapis.com", # Artifact Registry (コンテナ倉庫)
     "iam.googleapis.com",              # IAM (ユーザー・権限管理)
     "sts.googleapis.com",              # Security Token Service (GitHubとの認証用)
-    "iamcredentials.googleapis.com"    # OIDC認証のトークン生成用
+    "iamcredentials.googleapis.com",   # OIDC認証のトークン生成用
+    "secretmanager.googleapis.com"     # Secret Manager (APIキーの安全な管理)
   ]
 }
 
@@ -32,7 +33,41 @@ resource "google_project_service" "enabled_apis" {
 }
 
 # ------------------------------------------------------------------------------
-# 2. コンテナ倉庫 (Artifact Registry) を作る
+# 2. APIキーを安全に保管する Secret Manager の設定
+# ------------------------------------------------------------------------------
+# plaintext の環境変数ではなく、Google の鍵管理サービスに保存します。
+
+resource "google_secret_manager_secret" "gemini_api_key" {
+  depends_on = [google_project_service.enabled_apis]
+  secret_id  = "${var.app_name}-gemini-api-key"
+
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "gemini_api_key" {
+  secret      = google_secret_manager_secret.gemini_api_key.id
+  secret_data = var.gemini_api_key
+}
+
+# Cloud Run の実行時に使うサービスアカウント（デプロイ用の github_actions_sa とは別）
+resource "google_service_account" "cloud_run_sa" {
+  depends_on   = [google_project_service.enabled_apis]
+  account_id   = "${var.app_name}-run"
+  display_name = "Cloud Run Runtime Service Account"
+  description  = "Cloud Run がアプリを実行する際に使用するサービスアカウント"
+}
+
+# Cloud Run SA に Secret へのアクセス権を付与
+resource "google_secret_manager_secret_iam_member" "cloud_run_secret_access" {
+  secret_id = google_secret_manager_secret.gemini_api_key.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+# ------------------------------------------------------------------------------
+# 3. コンテナ倉庫 (Artifact Registry) を作る
 # ------------------------------------------------------------------------------
 # あなたのNext.jsアプリをコンテナ（Dockerイメージ）化したパッケージを保存するための倉庫です。
 
@@ -56,26 +91,32 @@ resource "google_cloud_run_v2_service" "web_app" {
   ingress    = "INGRESS_TRAFFIC_ALL" # インターネット全体からのアクセスを許可します
 
   template {
-    # 起動時の設定（メモリ、CPU、ポート等）
+    service_account = google_service_account.cloud_run_sa.email
+
     containers {
       # ※初回は、確実に起動するGoogle公式の「Hello World」仮イメージを使います。
       # この後、GitHub Actions から本番用のNext.jsアプリが上書きデプロイされます。
       image = "us-docker.pkg.dev/cloudrun/container/hello"
 
       ports {
-        container_port = 3000 # Next.jsアプリが起動するポート (3000番)
+        container_port = 3000
       }
 
-      # Gemini APIキーを環境変数としてアプリに注入します
+      # Gemini APIキーを Secret Manager から安全に注入します（平文では持ちません）
       env {
-        name  = "GEMINI_API_KEY"
-        value = var.gemini_api_key
+        name = "GEMINI_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.gemini_api_key.secret_id
+            version = "latest"
+          }
+        }
       }
 
       resources {
         limits = {
-          cpu    = "1"     # 1CPU (個人開発や小規模アプリなら十分です)
-          memory = "512Mi" # 512MBメモリ (足りない場合は 1Gi に変更可能)
+          cpu    = "1"
+          memory = "512Mi"
         }
       }
     }
