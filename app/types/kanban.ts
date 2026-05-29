@@ -30,6 +30,10 @@ export interface Task {
   title: string;     // タスクのタイトル（表示名）
   status: TaskStatus;// タスクの現在の状態
   createdAt: number; // タスクが作成された日時（JSONやlocalStorageに安全に保存するため、タイムスタンプ数値で管理）
+  category?: string; // 自動分類されたカテゴリ
+  duration?: number; // 自動分類された想定所要時間（分）
+  isClassifying?: boolean; // AIによる分類処理中を示すフラグ
+  error?: string | boolean; // AIによる分類処理のエラー状態
 }
 
 // 3. かんばんボードの各レーン（列）の表示設定を管理する構造定義

@@ -136,21 +136,87 @@ export function useKanban() {
   // --- 操作（Action）関数群 ---
 
   // 1. タスクの追加（初期ステータスは 'TODO'：未着手）
-  const handleAddTask = (e: React.FormEvent) => {
+  const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedTitle = inputValue.trim();
     if (!trimmedTitle) return;
 
+    const taskId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
     const newTask: Task = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      id: taskId,
       title: trimmedTitle,
       status: "TODO", // 必ず「TODO」から始まります
       createdAt: Date.now(),
+      isClassifying: true, // AI自動分類の実行中フラグ
     };
 
+    // 先にタスクを追加して、入力フォームをクリア（即時反映のUX）
     setTasks((prev) => [newTask, ...prev]);
     setInputValue("");
+
+    // バックグラウンドで非同期的に自動分類APIを呼び出す
+    try {
+      const response = await fetch("/api/classify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: trimmedTitle }),
+      });
+
+      if (!response.ok) {
+        let errMsg = `Failed to classify task: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.error) {
+            errMsg = errorData.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const data = await response.json();
+
+      // 分類結果でタスクの該当カード情報を非同期で更新
+      setTasks((prev) => {
+        const taskExists = prev.some((task) => task.id === taskId);
+        if (!taskExists) return prev;
+        return prev.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                category: data.category || undefined,
+                duration: data.duration ?? undefined,
+                isClassifying: false,
+              }
+            : task
+        );
+      });
+    } catch (error: any) {
+      console.error("Task classification failed:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "AI分類に失敗しました";
+      
+      // エラーが発生した場合は、対象のタスクがまだ存在するか確認する。
+      // 存在する場合のみ、分類中フラグを解除し、エラー状態を短いメッセージで記録する。
+      // 存在しない場合は何もせず終了する。
+      setTasks((prev) => {
+        const taskExists = prev.some((task) => task.id === taskId);
+        if (!taskExists) {
+          return prev;
+        }
+        return prev.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                isClassifying: false,
+                error: errorMessage,
+              }
+            : task
+        );
+      });
+    }
   };
 
   // 2. タスクの削除

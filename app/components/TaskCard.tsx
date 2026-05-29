@@ -2,7 +2,23 @@
 
 import { useState } from "react";
 import { Task, TaskStatus } from "../types/kanban";
-import { Trash2, Edit2, X, Save, ArrowLeft, ArrowRight, Calendar } from "lucide-react";
+import { Trash2, Edit2, X, Save, ArrowLeft, ArrowRight, Calendar, Tag, Clock, Loader2 } from "lucide-react";
+
+// カテゴリに応じた美しいバッジ用のカラースタイルを取得する関数
+const getCategoryStyles = (category: string) => {
+  switch (category) {
+    case "仕事":
+      return "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30";
+    case "勉強":
+      return "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-900/30";
+    case "家事":
+      return "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200/50 dark:border-amber-900/30";
+    case "趣味":
+      return "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200/50 dark:border-rose-900/30";
+    default:
+      return "bg-slate-50 text-slate-650 dark:bg-slate-900 dark:text-slate-400 border-slate-200/50 dark:border-slate-800/80";
+  }
+};
 
 /**
  * ==========================================
@@ -178,6 +194,41 @@ export default function TaskCard({
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* カテゴリ・想定所要時間タグの表示 */}
+      {(task.error || task.isClassifying || task.category || task.duration !== undefined) && (
+        <div className="flex flex-wrap gap-1.5 items-center select-none pt-1">
+          {task.error ? (
+            <span
+              className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md border bg-red-50/60 text-red-600 dark:bg-red-950/20 dark:text-red-400 border-red-200/50 dark:border-red-900/30"
+              title={typeof task.error === "string" ? task.error : "AI分析に失敗しました"}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+              <span>⚠️ AI分析エラー</span>
+            </span>
+          ) : task.isClassifying ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md border bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30 animate-pulse">
+              <Loader2 className="w-3 h-3 animate-spin text-blue-600 dark:text-blue-400" />
+              <span>🤖 AI分析中...</span>
+            </span>
+          ) : (
+            <>
+              {task.category && (
+                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors ${getCategoryStyles(task.category)}`}>
+                  <Tag className="w-3 h-3" />
+                  {task.category}
+                </span>
+              )}
+              {task.duration !== undefined && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border bg-slate-50 dark:bg-slate-950/60 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800">
+                  <Clock className="w-3.5 h-3.5" />
+                  {task.duration} 分
+                </span>
+              )}
+            </>
+          )}
         </div>
       )}
 
