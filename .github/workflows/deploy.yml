@@ -1,0 +1,92 @@
+name: Google Cloud デプロイ自動化 (CD)
+
+# ==============================================================================
+# GitHub Actions 自動デプロイ設定 (deploy.yml)
+# ==============================================================================
+# このファイルは、あなたが「main」ブランチにコードをプッシュした際、
+# 自動的にアプリをビルドして Google Cloud の Cloud Run へ更新デプロイを行うための設定です。
+# ------------------------------------------------------------------------------
+
+# 発火条件: 「main」または「master」ブランチにコードがプッシュされたときに起動します
+on:
+  push:
+    branches:
+      - main
+      - master
+
+# Workload Identity（パスワードレス認証）を使用するために必要なアクセス権限の設定です
+permissions:
+  contents: read      # リポジトリのコードを読む権限
+  id-token: write     # Google Cloudと安全に接続するためのトークンを発行する権限（必須）
+
+env:
+  # 💡 以下の値は、ご自身の環境に合わせて直接書き換えるか、
+  # GitHubリポジトリの設定（Settings > Secrets and variables）に登録して使用します。
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }} # 例: my-nextjs-app-421508
+  GCP_REGION: asia-northeast1                    # デプロイ先の地域（東京）
+  
+  # インフラ作成（Terraform）後に表示される設定値をそれぞれ指定します
+  WIP_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }} # Workload Identity プロバイダID
+  SERVICE_ACCOUNT_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }} # サービスアカウントのメールアドレス
+  
+  # アプリとコンテナ倉庫の名前（Terraformの app_name に合わせます）
+  APP_NAME: nextjs-app
+  REPOSITORY_NAME: nextjs-app-repo
+
+jobs:
+  deploy:
+    name: アプリのビルドとCloud Runへの自動デプロイ
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. GitHub上のソースコードを取得します
+      - name: リポジトリのコードを取得
+        uses: actions/checkout@v4
+
+      # 2. Workload Identity を利用して Google Cloud に安全にログインします
+      # （パスワードキーを使用しないキーレス認証のため、非常に安全です）
+      - name: Google Cloud にログイン (Workload Identity)
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIP_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT_EMAIL }}
+
+      # 3. Google Cloud CLI (gcloudコマンド) のセットアップ
+      - name: Google Cloud SDK のセットアップ
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 4. DockerがGoogle Cloudのコンテナ倉庫（Artifact Registry）へアクセスできるように設定
+      - name: Docker 認証の設定
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # 5. Next.js アプリケーションの Docker イメージをビルドし、倉庫にプッシュします
+      - name: Docker イメージのビルドとプッシュ
+        run: |
+          IMAGE_TAG="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.APP_NAME }}:${{ github.sha }}"
+          IMAGE_LATEST="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.APP_NAME }}:latest"
+          
+          # イメージのビルド
+          docker build -t $IMAGE_TAG -t $IMAGE_LATEST .
+          
+          # 倉庫（Artifact Registry）へプッシュ（アップロード）
+          docker push $IMAGE_TAG
+          docker push $IMAGE_LATEST
+          
+          # 以降のステップで使えるように環境変数にタグを登録
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # 6. 倉庫にアップロードした新しいイメージを使って、Cloud Run サーバーを更新します
+      - name: Cloud Run へデプロイ
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.APP_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.IMAGE_TAG }}
+
+      # 7. デプロイ成功後に完了メッセージとURLを表示します
+      - name: デプロイ完了の報告
+        run: |
+          echo "🎉 デプロイが正常に完了しました！"
+          echo "🚀 アプリのURL: ${{ steps.auth.outputs.project_id }} の Cloud Run サービスをご確認ください。"
