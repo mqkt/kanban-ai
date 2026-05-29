@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, master, cicd ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main, master, cicd ]
+    branches: [ main, master ]
 
 jobs:
   lint-and-build:
@@ -13,10 +13,10 @@ jobs:
 
     steps:
       - name: リポジトリのコードを取得
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Node.js環境のセットアップ (v20, キャッシュ有効)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: リポジトリのコードを取得
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Docker Buildxのセットアップ
         uses: docker/setup-buildx-action@v4
