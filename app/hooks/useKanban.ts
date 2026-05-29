@@ -67,7 +67,7 @@ export function useKanban() {
         const oldTodos = localStorage.getItem("todos_data");
         if (oldTodos) {
           const parsedOld = JSON.parse(oldTodos);
-          const migratedTasks: Task[] = parsedOld.map((todo: any) => ({
+          const migratedTasks: Task[] = parsedOld.map((todo: { id?: string; text?: string; title?: string; completed?: boolean; createdAt?: number }) => ({
             id: todo.id || crypto.randomUUID(),
             title: todo.text || todo.title || "無題のタスク",
             status: todo.completed ? "DONE" : "TODO",
@@ -172,7 +172,7 @@ export function useKanban() {
           if (errorData && errorData.error) {
             errMsg = errorData.error;
           }
-        } catch (_) {}
+        } catch {}
         throw new Error(errMsg);
       }
 
@@ -193,7 +193,7 @@ export function useKanban() {
             : task
         );
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Task classification failed:", error);
       
       const errorMessage = error instanceof Error ? error.message : "AI分類に失敗しました";
