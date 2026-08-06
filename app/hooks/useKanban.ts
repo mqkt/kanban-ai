@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Task, TaskStatus } from "../types/kanban";
-import { IN_PROGRESS_WIP_LIMIT } from "@/lib/constants";
 
 type TaskPatch = Partial<
   Pick<Task, "title" | "status" | "category" | "priority">
@@ -30,7 +29,6 @@ export function useKanban() {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [wipWarning, setWipWarning] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [draggedOverLane, setDraggedOverLane] = useState<TaskStatus | null>(null);
 
@@ -101,11 +99,6 @@ export function useKanban() {
       );
     } catch (error) {
       console.error("Task update failed:", error);
-      // サーバー側でもWIP制限を強制しているため、複数タブ等でクライアント側チェックを
-      // すり抜けた場合はここでサーバーからの拒否理由を拾って表示する。
-      if (error instanceof Error && error.message.includes("進行中レーン")) {
-        setWipWarning(error.message);
-      }
       await loadTasks();
     }
   };
@@ -179,23 +172,6 @@ export function useKanban() {
   };
 
   const updateTaskStatus = (id: string, newStatus: TaskStatus) => {
-    const task = tasks.find((t) => t.id === id);
-    if (
-      task &&
-      task.status !== newStatus &&
-      newStatus === "IN_PROGRESS"
-    ) {
-      const inProgressCount = tasks.filter(
-        (t) => t.status === "IN_PROGRESS"
-      ).length;
-      if (inProgressCount >= IN_PROGRESS_WIP_LIMIT) {
-        setWipWarning(
-          `進行中レーンは同時に${IN_PROGRESS_WIP_LIMIT}件までです。他のタスクを完了・移動してから追加してください。`
-        );
-        return;
-      }
-    }
-    setWipWarning(null);
     void patchTask(id, { status: newStatus });
   };
 
@@ -306,7 +282,6 @@ export function useKanban() {
     isMounted,
     isLoading,
     loadError,
-    wipWarning,
     draggedOverLane,
     addTask,
     deleteTask,
