@@ -1,6 +1,8 @@
 "use client";
 
-import { Sun, Moon, Trash2, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { signOut } from "next-auth/react";
+import { Sun, Moon, Trash2, Sparkles, LogOut, LogIn } from "lucide-react";
 
 /**
  * ==========================================
@@ -31,6 +33,10 @@ import { Sun, Moon, Trash2, Sparkles } from "lucide-react";
  *     現在「完了（DONE）」レーンにタスクが存在しているかどうか。存在する時のみ「完了クリア」ボタンを表示します。
  * - `clearCompletedTasks` (() => void):
  *     「完了タスクをクリア」ボタンをクリックしたときに呼び出される一括削除関数。
+ * - `isGuest` (boolean):
+ *     ゲストセッションかどうか。trueの場合のみ、Google/メールで正式アカウントに
+ *     切り替えるための「ログイン」リンクを表示する（自動開始したゲストが
+ *     いつでも本登録に移行できるようにするため）。
  *
  * ==========================================
  * 【State（内部状態）の役割】
@@ -44,6 +50,7 @@ interface BoardHeaderProps {
   toggleDarkMode: () => void;
   hasCompletedTasks: boolean;
   clearCompletedTasks: () => void;
+  isGuest: boolean;
 }
 
 export default function BoardHeader({
@@ -51,6 +58,7 @@ export default function BoardHeader({
   toggleDarkMode,
   hasCompletedTasks,
   clearCompletedTasks,
+  isGuest,
 }: BoardHeaderProps) {
   return (
     <header className="panel-card px-6 py-6 sm:py-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -64,7 +72,7 @@ export default function BoardHeader({
             Kanban Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-            ドラッグ＆ドロップでスマートにタスクを管理
+            ドラッグ＆ドロップやボタンでスマートにタスクを管理
           </p>
         </div>
       </div>
@@ -82,6 +90,17 @@ export default function BoardHeader({
           </button>
         )}
 
+        {/* ゲストの間だけ、正式アカウントへの切り替え導線を表示する */}
+        {isGuest && (
+          <Link
+            href="/login"
+            className="btn-action-secondary flex items-center gap-1.5 px-3 text-xs font-semibold"
+          >
+            <LogIn className="w-4 h-4" />
+            ログイン
+          </Link>
+        )}
+
         {/* ダークモード切り替えボタン */}
         <button
           onClick={toggleDarkMode}
@@ -93,6 +112,15 @@ export default function BoardHeader({
           ) : (
             <Moon className="w-5 h-5 text-indigo-600" />
           )}
+        </button>
+
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="btn-action-secondary"
+          aria-label="ログアウト"
+          title="ログアウト"
+        >
+          <LogOut className="w-5 h-5 text-slate-600 dark:text-slate-300" />
         </button>
       </div>
     </header>
