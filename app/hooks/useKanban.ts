@@ -1,274 +1,243 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Task, TaskStatus } from "../types/kanban";
 
-/**
- * ==========================================
- * 【初心者向け解説：このファイルはなぜ必要か？】
- * ==========================================
- * React開発において、「画面の見た目（UI）」と「データの動き（ロジック・状態管理）」を
- * 1つのファイルに混在させると、コードが長く複雑になり、何がどこで行われているか分からなくなります。
- * このフックは、かんばんボード全体の「頭脳（ロジック）」を切り出してカプセル化（独立）させるためのものです。
- * UIコンポーネント（page.tsxなど）は、このフックから必要なデータや操作関数を呼び出すだけでよくなり、
- * 見た目の制御に集中できます。
- *
- * ==========================================
- * 【何を担当するか】
- * ==========================================
- * 以下の「ロジック（仕組み）」すべてを一括管理します：
- * 1. タスクのデータ状態（CRUD：追加・削除・更新・取得）
- * 2. データの永続化（localStorageへの自動保存と、初回ロード時の古いTodoリストデータの自動移行）
- * 3. ドラッグ＆ドロップ操作によるステータスの更新ロジック
- * 4. アプリケーションのダークモード切り替え状態の管理
- *
- * ==========================================
- * 【Propsの意味】
- * ==========================================
- * ※ このファイルはカスタムフック（関数）なので、Propsは受け取りません。
- * 　 戻り値として、UIが必要とするすべての状態（State）と関数オブジェクトを返却します。
- *
- * ==========================================
- * 【State（内部状態）の役割】
- * ==========================================
- * - `tasks` (Task[]):
- *     ボード上に存在するすべてのタスクデータのリスト。これが更新されると画面が再描画されます。
- * - `inputValue` (string):
- *     新規タスクを入力するためのフォームテキスト。
- * - `isDarkMode` (boolean):
- *     ダークモードが有効かどうかを表す真偽値。
- * - `isMounted` (boolean):
- *     Reactがブラウザにマウント（初期表示）されたかを示すフラグ。ハイドレーション（サーバーとクライアントのHTML不整合）を防ぐために使用。
- * - `draggedTaskId` (string | null):
- *     現在ユーザーがドラッグを開始しているタスクのユニークID。
- * - `draggedOverLane` (TaskStatus | null):
- *     現在タスクがどのレーン（列）の上にドラッグされているか。レーンを点線で光らせるUIフィードバックに使用。
- */
+type TaskPatch = Partial<
+  Pick<Task, "title" | "status" | "category" | "priority">
+>;
+
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Request failed: ${response.status}`);
+  }
+  return data as T;
+}
 
 export function useKanban() {
-  // --- 状態（State）の定義 ---
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [inputValue, setInputValue] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [draggedOverLane, setDraggedOverLane] = useState<TaskStatus | null>(null);
 
-  // --- データの初期読み込みと古いデータからの移行 ---
-  useEffect(() => {
-    setIsMounted(true);
+  const loadTasks = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
-      // 1. かんばんボード用の保存データがあるか確認
-      const savedTasks = localStorage.getItem("kanban_tasks_data");
-      if (savedTasks) {
-        setTasks(JSON.parse(savedTasks));
-      } else {
-        // 2. なければ、旧Todoアプリのデータ（todos_data）があるか確認し、あれば自動移行
-        const oldTodos = localStorage.getItem("todos_data");
-        if (oldTodos) {
-          const parsedOld = JSON.parse(oldTodos);
-          const migratedTasks: Task[] = parsedOld.map((todo: { id?: string; text?: string; title?: string; completed?: boolean; createdAt?: number }) => ({
-            id: todo.id || crypto.randomUUID(),
-            title: todo.text || todo.title || "無題のタスク",
-            status: todo.completed ? "DONE" : "TODO",
-            createdAt: todo.createdAt || Date.now(),
-          }));
-          setTasks(migratedTasks);
-          localStorage.setItem("kanban_tasks_data", JSON.stringify(migratedTasks));
-        } else {
-          // 3. どちらもなければ初期のサンプルタスクをロード
-          const defaultTasks: Task[] = [
-            {
-              id: "sample-1",
-              title: "🚀 かんばんボードへようこそ！",
-              status: "TODO",
-              createdAt: Date.now() - 3600000 * 2,
-            },
-            {
-              id: "sample-2",
-              title: "💻 ドラッグ＆ドロップでカードを動かしてみよう",
-              status: "IN_PROGRESS",
-              createdAt: Date.now() - 3600000,
-            },
-            {
-              id: "sample-3",
-              title: "🎉 タスクを完了レーンに移動して達成感を味わおう",
-              status: "DONE",
-              createdAt: Date.now(),
-            },
-          ];
-          setTasks(defaultTasks);
-        }
+      // GET /api/tasks はcursorページネーション化されているため、
+      // 現状の「3レーン全件表示」UXを保つために全ページを結合して取得する。
+      const allTasks: Task[] = [];
+      let cursor: string | null = null;
+      let hasMore = true;
+      while (hasMore) {
+        const params: string = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+        const page: { tasks: Task[]; nextCursor: string | null } = await requestJson(
+          `/api/tasks${params}`
+        );
+        allTasks.push(...page.tasks);
+        cursor = page.nextCursor;
+        hasMore = cursor !== null;
       }
-
-      // 4. テーマの読み込み
-      const savedTheme = localStorage.getItem("theme");
-      if (savedTheme) {
-        setIsDarkMode(savedTheme === "dark");
-      } else {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        setIsDarkMode(prefersDark);
-      }
+      setTasks(allTasks);
     } catch (error) {
-      console.error("localStorageからの初期データ読み込みに失敗しました", error);
+      const message =
+        error instanceof Error ? error.message : "タスクの読み込みに失敗しました";
+      setLoadError(message);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  // --- タスクの状態変更時の自動保存 ---
   useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem("kanban_tasks_data", JSON.stringify(tasks));
-    }
-  }, [tasks, isMounted]);
+    setIsMounted(true);
 
-  // --- テーマ変更時のクラス付与と自動保存 ---
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === "dark");
+    } else {
+      setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
+    }
+
+    void loadTasks();
+  }, [loadTasks]);
+
   useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem("theme", isDarkMode ? "dark" : "light");
-      if (isDarkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+    if (!isMounted) return;
+
+    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
     }
   }, [isDarkMode, isMounted]);
 
-  // --- 操作（Action）関数群 ---
+  const patchTask = async (id: string, patch: TaskPatch) => {
+    setTasks((prev) =>
+      prev.map((task) => (task.id === id ? { ...task, ...patch } : task))
+    );
 
-  // 1. タスクの追加（初期ステータスは 'TODO'：未着手）
-  const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const trimmedTitle = inputValue.trim();
-    if (!trimmedTitle) return;
-
-    const taskId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
-    const newTask: Task = {
-      id: taskId,
-      title: trimmedTitle,
-      status: "TODO", // 必ず「TODO」から始まります
-      createdAt: Date.now(),
-      isClassifying: true, // AI自動分類の実行中フラグ
-    };
-
-    // 先にタスクを追加して、入力フォームをクリア（即時反映のUX）
-    setTasks((prev) => [newTask, ...prev]);
-    setInputValue("");
-
-    // バックグラウンドで非同期的に自動分類APIを呼び出す
     try {
-      const response = await fetch("/api/classify", {
+      const data = await requestJson<{ task: Task }>("/api/tasks", {
+        method: "PATCH",
+        body: JSON.stringify({ id, ...patch }),
+      });
+      setTasks((prev) =>
+        prev.map((task) => (task.id === id ? { ...task, ...data.task } : task))
+      );
+    } catch (error) {
+      console.error("Task update failed:", error);
+      await loadTasks();
+    }
+  };
+
+  const addTask = async (title: string) => {
+    const trimmedTitle = title.trim();
+
+    let data: { task: Task };
+    try {
+      data = await requestJson<{ task: Task }>("/api/tasks", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        body: JSON.stringify({ title: trimmedTitle, status: "TODO" }),
+      });
+    } catch (error) {
+      console.error("Task creation failed:", error);
+      setLoadError(
+        error instanceof Error ? error.message : "タスクの追加に失敗しました"
+      );
+      // 入力値をTaskForm側に残したまま再送信できるよう、呼び出し元へエラーを伝播する。
+      throw error;
+    }
+
+    const taskId = data.task.id;
+    setTasks((prev) => [{ ...data.task, isClassifying: true }, ...prev]);
+
+    try {
+      const classifyData = await requestJson<{
+        category?: string;
+        priority?: Task["priority"];
+      }>("/api/classify", {
+        method: "POST",
         body: JSON.stringify({ title: trimmedTitle }),
       });
 
-      if (!response.ok) {
-        let errMsg = `Failed to classify task: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          if (errorData && errorData.error) {
-            errMsg = errorData.error;
-          }
-        } catch {}
-        throw new Error(errMsg);
-      }
-
-      const data = await response.json();
-
-      // 分類結果でタスクの該当カード情報を非同期で更新
-      setTasks((prev) => {
-        const taskExists = prev.some((task) => task.id === taskId);
-        if (!taskExists) return prev;
-        return prev.map((task) =>
-          task.id === taskId
-            ? {
-                ...task,
-                category: data.category || undefined,
-                duration: data.duration ?? undefined,
-                isClassifying: false,
-              }
-            : task
-        );
+      await patchTask(taskId, {
+        category: classifyData.category,
+        priority: classifyData.priority,
       });
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, isClassifying: false } : task
+        )
+      );
     } catch (error) {
       console.error("Task classification failed:", error);
-      
-      const errorMessage = error instanceof Error ? error.message : "AI分類に失敗しました";
-      
-      // エラーが発生した場合は、対象のタスクがまだ存在するか確認する。
-      // 存在する場合のみ、分類中フラグを解除し、エラー状態を短いメッセージで記録する。
-      // 存在しない場合は何もせず終了する。
-      setTasks((prev) => {
-        const taskExists = prev.some((task) => task.id === taskId);
-        if (!taskExists) {
-          return prev;
-        }
-        return prev.map((task) =>
+      const errorMessage =
+        error instanceof Error ? error.message : "AI分類に失敗しました";
+      setTasks((prev) =>
+        prev.map((task) =>
           task.id === taskId
-            ? {
-                ...task,
-                isClassifying: false,
-                error: errorMessage,
-              }
+            ? { ...task, isClassifying: false, error: errorMessage }
             : task
-        );
-      });
+        )
+      );
     }
   };
 
-  // 2. タスクの削除
-  const deleteTask = (id: string) => {
+  const deleteTask = async (id: string) => {
+    const previousTasks = tasks;
     setTasks((prev) => prev.filter((task) => task.id !== id));
+
+    try {
+      await requestJson<{ ok: boolean }>("/api/tasks", {
+        method: "DELETE",
+        body: JSON.stringify({ id }),
+      });
+    } catch (error) {
+      console.error("Task deletion failed:", error);
+      setTasks(previousTasks);
+    }
   };
 
-  // 3. 特定タスクのステータス（レーン）更新（クイック移動ボタン等で使用）
   const updateTaskStatus = (id: string, newStatus: TaskStatus) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, status: newStatus } : task
-      )
-    );
+    void patchTask(id, { status: newStatus });
   };
 
-  // 4. タスクタイトルの編集保存（インライン編集完了時に使用）
   const editTaskTitle = (id: string, newTitle: string) => {
     const trimmed = newTitle.trim();
     if (!trimmed) {
-      deleteTask(id); // 空っぽに編集された場合は自動削除
+      void deleteTask(id);
       return;
     }
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, title: trimmed } : task
-      )
-    );
+    void patchTask(id, { title: trimmed });
   };
 
-  // 5. 完了した全タスクの一括削除
-  const clearCompletedTasks = () => {
-    if (window.confirm("完了したすべてのタスクを削除しますか？")) {
-      setTasks((prev) => prev.filter((task) => task.status !== "DONE"));
+  // トリアージ機能（重複タスクの検出）が提案したグループを実際に統合する。
+  // 新しいAPIは作らず、既存の PATCH（タイトル変更）と DELETE（残りを削除）を組み合わせるだけに
+  // している。誤マージ時の影響範囲を小さくするため、常に「1件を残して残りを消す」形に統一。
+  const mergeTasks = async (keepId: string, mergeIds: string[], newTitle: string) => {
+    try {
+      await requestJson<{ task: Task }>("/api/tasks", {
+        method: "PATCH",
+        body: JSON.stringify({ id: keepId, title: newTitle }),
+      });
+      await Promise.all(
+        mergeIds.map((id) =>
+          requestJson<{ ok: boolean }>("/api/tasks", {
+            method: "DELETE",
+            body: JSON.stringify({ id }),
+          })
+        )
+      );
+    } catch (error) {
+      console.error("Task merge failed:", error);
+      setLoadError(
+        error instanceof Error ? error.message : "タスクの統合に失敗しました"
+      );
+    } finally {
+      await loadTasks();
     }
   };
 
-  // --- ドラッグ＆ドロップ（Drag and Drop）イベント処理 ---
+  const clearCompletedTasks = async () => {
+    if (!window.confirm("完了したすべてのタスクを削除しますか？")) return;
 
-  // ドラッグ開始
+    const previousTasks = tasks;
+    setTasks((prev) => prev.filter((task) => task.status !== "DONE"));
+
+    try {
+      await requestJson<{ ok: boolean }>("/api/tasks", {
+        method: "DELETE",
+        body: JSON.stringify({ completed: true }),
+      });
+    } catch (error) {
+      console.error("Completed task cleanup failed:", error);
+      setTasks(previousTasks);
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedTaskId(id);
     e.dataTransfer.setData("text/plain", id);
 
-    // ドラッグ中に背後の元のカードを半透明にする（Reactのライフサイクルの後に適用するためsetTimeoutを使用）
     setTimeout(() => {
       const element = document.getElementById(`card-${id}`);
       if (element) element.style.opacity = "0.4";
     }, 0);
   };
 
-  // ドラッグ終了（どこかにドロップされた、またはキャンセルされたとき）
   const handleDragEnd = (e: React.DragEvent, id: string) => {
     setDraggedTaskId(null);
     setDraggedOverLane(null);
@@ -276,7 +245,6 @@ export function useKanban() {
     if (element) element.style.opacity = "1";
   };
 
-  // タスクがレーンの上に乗っているとき（ブラウザのデフォルトドロップ拒否挙動を無効化）
   const handleDragOverLane = (e: React.DragEvent, laneId: TaskStatus) => {
     e.preventDefault();
     if (draggedOverLane !== laneId) {
@@ -284,19 +252,16 @@ export function useKanban() {
     }
   };
 
-  // タスクがレーンの外に離れたとき
   const handleDragLeaveLane = (e: React.DragEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX;
     const y = e.clientY;
 
-    // 子要素でのチラつき防止のためにマウスの実際の位置を確認して離脱判定
     if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
       setDraggedOverLane(null);
     }
   };
 
-  // レーンにタスクがドロップされたとき
   const handleDropLane = (e: React.DragEvent, laneId: TaskStatus) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
@@ -307,23 +272,22 @@ export function useKanban() {
     setDraggedOverLane(null);
   };
 
-  // テーマ切り替え
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => !prev);
   };
 
-  // --- 外部（UIコンポーネント）へ公開するIF ---
   return {
     tasks,
-    inputValue,
-    setInputValue,
     isDarkMode,
     isMounted,
+    isLoading,
+    loadError,
     draggedOverLane,
-    handleAddTask,
+    addTask,
     deleteTask,
     updateTaskStatus,
     editTaskTitle,
+    mergeTasks,
     clearCompletedTasks,
     toggleDarkMode,
     dragHandlers: {

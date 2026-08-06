@@ -97,6 +97,35 @@ Terraformがあなたの代わりにGoogle Cloudを操作できるように、�
 gcp_project_id    = "あなたのGCPプロジェクトID（メモしたもの）"
 github_repository = "あなたのGitHubユーザー名/リポジトリ名"
 gemini_api_key    = "あなたのGemini APIキー"
+database_password = "Cloud SQLで使う強いDBパスワード"
+auth_secret       = "Auth.jsで使うランダムな秘密文字列"
+auth_google_id    = "Google OAuth クライアントID"
+auth_google_secret = "Google OAuth クライアントシークレット"
+auth_resend_key   = "Resend APIキー"
+auth_email_from   = "Kanban Dashboard <login@example.com>"
+cron_secret       = "ゲスト自動削除API(cleanup-guests)を保護するランダムな秘密文字列"
+
+# 本番運用ではtrue推奨（誤ってterraform destroyしてもDBが消えないようにする）。
+# デフォルトがtrueなので、明示的にfalseにしない限りこの行は省略してもOK。
+database_deletion_protection = true
+```
+
+`auth_secret` ・ `cron_secret` は以下のコマンドで作成できます。
+
+```bash
+openssl rand -base64 32
+```
+
+Google OAuth には、Terraform適用後に表示される `cloud_run_url` を使って以下のコールバックURLを登録します。
+
+```text
+https://あなたのCloud Run URL/api/auth/callback/google
+```
+
+ローカル開発も行う場合は、こちらも追加します。
+
+```text
+http://localhost:3000/api/auth/callback/google
 ```
 
 ### 2. インフラ構築コマンドの実行
@@ -127,6 +156,18 @@ gemini_api_key    = "あなたのGemini APIキー"
 
 🎉 **完了画面に、あなたのアプリのURLや、GitHub設定に必要な情報が表示されます！**
 表示された出力値（Outputs）をメモしておいてください。
+
+### 3. DBマイグレーションを適用する
+
+Cloud SQLを作成した直後は、まだテーブルがありません。アプリを使う前にPrismaのマイグレーションを適用します。
+
+Cloud SQL Auth Proxyなどで `DATABASE_URL` からCloud SQLへ接続できる状態にしたうえで、プロジェクトルートで以下を実行してください。
+
+```bash
+npx prisma migrate deploy
+```
+
+ローカルPostgreSQLで開発する場合も、同じコマンドでテーブルを作成できます。
 
 ---
 
@@ -162,3 +203,70 @@ GitHub のリポジトリページを開き、**「Settings」>「Secrets and va
 terraform destroy
 ```
 * 途中で聞かれたら **`yes`** と入力すれば、数分ですべてのGoogle Cloud上のリソースが消去され、課金の心配もなくなります。
+
+**⚠️ 注意（`database_deletion_protection` を有効にしている場合）**
+
+`database_deletion_protection = true`（デフォルト）のままだと、Cloud SQLインスタンスが削除保護されているため `terraform destroy` は失敗します。誤った削除を防ぐための仕様です。本当に削除したい場合は、`terraform.tfvars` で一時的に
+
+```hcl
+database_deletion_protection = false
+```
+
+に変更してから `terraform apply` を一度実行し、削除保護を解除した上で改めて `terraform destroy` を実行してください。
+
+---
+
+## 🔄 別のGoogleアカウントへ移行する
+
+Google OAuth・Gemini APIキー・GCPプロジェクトのすべてを別のGoogleアカウントに切り替えたい場合のチェックリストです。コード側はすべて環境変数・Terraform変数経由になっており、プロジェクト固有の値がハードコードされている箇所は無いため、コード変更は不要です。以下は「Google Cloud コンソール上での操作」と「設定ファイルの書き換え」だけで完結します。
+
+### 1. 新しいGoogleアカウントでGCPプロジェクトを作る
+
+このガイドの [☁️ Google Cloud でプロジェクトを作成する](#️-google-cloud-でプロジェクトを作成する) を、**別のGoogleアカウントでログインした状態**で最初からやり直します。
+
+- [ ] 新しいGoogleアカウントで [Google Cloud コンソール](https://console.cloud.google.com/) にログイン
+- [ ] 新規プロジェクトを作成し、プロジェクトIDをメモ
+- [ ] 請求先アカウント（課金）を有効化
+
+### 2. Google OAuth クライアントを新規発行する
+
+- [ ] 新しいプロジェクトの「APIとサービス」>「認証情報」で、OAuth同意画面を設定
+- [ ] OAuth 2.0 クライアントIDを新規作成（種類: ウェブアプリケーション）
+- [ ] 承認済みのリダイレクトURIに、新しいCloud Run URL（`terraform apply` 完了後に判明するため、一旦ローカル開発用の `http://localhost:3000/api/auth/callback/google` だけ登録し、後述の手順4完了後にCloud Run分を追記してもよい）を登録
+- [ ] 発行されたクライアントID・クライアントシークレットを控える（**チャットには貼らず**、次の手順で直接ファイルに入力する）
+
+### 3. Gemini APIキーを新規発行する
+
+- [ ] 新しいGoogleアカウント・プロジェクトで [Google AI Studio](https://aistudio.google.com/) もしくはCloud Consoleから新しいGemini APIキーを発行
+
+### 4. 設定ファイルを新しい値に書き換える
+
+以下のファイルはすべてgitignore対象（コミットされない）なので、値を直接書き換えます。
+
+- [ ] `terraform/terraform.tfvars`: `gcp_project_id` ・ `auth_google_id` ・ `auth_google_secret` ・ `gemini_api_key` を新しい値に更新（他の値、例えば `auth_secret` や `database_password` は使い回しではなく、新環境用に発行し直すことを推奨）
+- [ ] `.env.local`（ローカル開発を続ける場合）: `AUTH_GOOGLE_ID` ・ `AUTH_GOOGLE_SECRET` ・ `GEMINI_API_KEY` を同様に更新
+
+### 5. 新しいプロジェクトにインフラを構築する
+
+- [ ] `terraform/` フォルダで `gcloud auth login` ・ `gcloud auth application-default login` を新しいアカウントで実行し直す（[🔑 ローカルPCから Google Cloud にログインする](#-ローカルpcから-google-cloud-にログインする) 参照）
+- [ ] `gcloud config set project <新しいプロジェクトID>`
+- [ ] `terraform init` → `terraform plan` → `terraform apply`
+- [ ] 完了画面に表示された `cloud_run_url` を、手順2のOAuthクライアントの「承認済みのリダイレクトURI」に追記（`https://<cloud_run_url>/api/auth/callback/google`）
+- [ ] `npx prisma migrate deploy` でDBマイグレーションを適用
+
+### 6. GitHub Secretsを更新する
+
+新しいプロジェクトの `terraform apply` 完了画面に表示される値で、GitHubリポジトリの Secrets（[🤖 GitHub Actions で自動デプロイ（CD）を設定する](#-github-actions-で自動デプロイcdを設定する) 参照）を上書きします。
+
+- [ ] `GCP_PROJECT_ID`
+- [ ] `GCP_WORKLOAD_IDENTITY_PROVIDER`
+- [ ] `GCP_SERVICE_ACCOUNT_EMAIL`
+
+### 7. 旧プロジェクトの後片付け
+
+課金を止めるため、旧アカウント・旧プロジェクト側のリソースを削除します。
+
+- [ ] 旧プロジェクトの `terraform/`（旧 `terraform.tfvars` ・ `terraform.tfstate` が必要）で `terraform destroy` を実行、または
+- [ ] Google Cloud コンソールでプロジェクトごと「シャットダウン」する（一定期間後に完全削除される）
+
+いずれの操作も本番リソースに対する破壊的な操作のため、Claudeが代行することはありません。手順1〜3（Google Cloud コンソール上でのプロジェクト作成・OAuth設定・APIキー発行）はブラウザ操作を伴うため、Claude Browserでの同席作業も可能です（ただしログイン自体・課金情報の入力・発行されたシークレットの転記はユーザー自身が行います）。

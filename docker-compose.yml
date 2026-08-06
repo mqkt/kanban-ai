@@ -8,4 +8,48 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
     restart: always
+
+  db:
+    image: postgres:16-alpine
+    container_name: kanban-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: kanban
+      POSTGRES_USER: kanban_app
+      POSTGRES_PASSWORD: password
+    volumes:
+      - kanban_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kanban_app -d kanban"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # 結合テスト専用のPostgres。開発用DB(db)とは別インスタンス・別ポートにし、
+  # テストの後片付けが漏れても開発中のデータを壊さないようにする。tmpfsのため永続化しない。
+  test-db:
+    image: postgres:16-alpine
+    container_name: kanban-test-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: kanban_test
+      POSTGRES_USER: kanban_app
+      POSTGRES_PASSWORD: password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kanban_app -d kanban_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: "no"
+
+volumes:
+  kanban_pgdata:

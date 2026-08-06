@@ -97,7 +97,7 @@ export default function KanbanLane({
         </div>
         {/* レーン内のタスク数カウンター */}
         <span
-          className={`px-2.5 py-0.5 rounded-full text-xs font-bold text-white ${lane.accentClass} shadow-sm`}
+          className={`px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-sm ${lane.accentClass}`}
         >
           {tasks.length}
         </span>
