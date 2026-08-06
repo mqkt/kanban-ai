@@ -27,6 +27,9 @@ jobs:
       - name: ESLintによるコードチェックを実行
         run: npm run lint
 
+      - name: Vitestによるユニット・コンポーネントテストを実行
+        run: npm run test
+
       - name: Next.jsのプロダクションビルドを実行
         run: npm run build
 
