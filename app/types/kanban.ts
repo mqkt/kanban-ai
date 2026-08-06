@@ -21,8 +21,28 @@
  * 　 純粋な「設計図（型定義）」のみを担当します。
  */
 
-// 1. タスクのステータスを表す型（TODO: 未着手, IN_PROGRESS: 進行中, DONE: 完了 のいずれかしか受け付けない）
-export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+// 1. タスクのステータスを表す型
+//    TODO: 未着手, IN_PROGRESS: 進行中, PENDING: 保留（他者の返信待ちなど）, DONE: 完了
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "PENDING" | "DONE";
+
+// レーンを左から右に並べる順序。クイック移動ボタン（前へ/次へ）や
+// WIP制限のチェックなど、ステータスの前後関係が必要な箇所で共通利用する。
+export const TASK_STATUS_ORDER: TaskStatus[] = [
+  "TODO",
+  "IN_PROGRESS",
+  "PENDING",
+  "DONE",
+];
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  TODO: "未着手",
+  IN_PROGRESS: "進行中",
+  PENDING: "保留",
+  DONE: "完了",
+};
+
+// タスクの優先度（Geminiによる自動推定）。
+export type TaskPriority = "高" | "中" | "低";
 
 // 2. 1つのタスクカードが持つデータの構造定義
 export interface Task {
@@ -30,8 +50,9 @@ export interface Task {
   title: string;     // タスクのタイトル（表示名）
   status: TaskStatus;// タスクの現在の状態
   createdAt: number; // タスクが作成された日時（JSONやlocalStorageに安全に保存するため、タイムスタンプ数値で管理）
+  updatedAt?: number; // タスクが最後に更新された日時（停滞タスク検知に使用）
   category?: string; // 自動分類されたカテゴリ
-  duration?: number; // 自動分類された想定所要時間（分）
+  priority?: TaskPriority; // 自動推定された優先度
   isClassifying?: boolean; // AIによる分類処理中を示すフラグ
   error?: string | boolean; // AIによる分類処理のエラー状態
 }
@@ -42,4 +63,5 @@ export interface LaneConfig {
   title: string;        // レーンのタイトル（画面表示用）
   accentClass: string;  // タスク数バッジなどのアクセント背景色を指定するTailwindクラス
   icon: React.ReactNode;// レーンヘッダーに表示するLucideアイコンコンポーネント
+  wipLimit?: number;     // このレーンに同時に置けるタスク数の上限（未指定なら無制限）
 }

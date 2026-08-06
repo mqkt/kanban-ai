@@ -1,134 +1,160 @@
-"use client";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth, signIn } from "@/auth";
 
-import { useKanban } from "./hooks/useKanban";
-import { LaneConfig } from "./types/kanban";
-import { Clock, Layers, CheckCircle } from "lucide-react";
-import BoardHeader from "./components/BoardHeader";
-import TaskForm from "./components/TaskForm";
-import KanbanLane from "./components/KanbanLane";
-
-/**
- * ==========================================
- * 【初心者向け解説：このファイルはなぜ必要か？】
- * ==========================================
- * Next.jsにおけるこの画面の「玄関口（メインページ）」としての役割を果たすためです。
- * 分割した各パーツ（ヘッダー、入力フォーム、各レーン）を、最終的にどのように画面に配置して
- * 組み立てるかという「レイアウトと結合」を指示します。
- *
- * ==========================================
- * 【何を担当するか】
- * ==========================================
- * 以下の統合処理を担当します：
- * 1. 状態管理カスタムフック（useKanban）を呼び出し、必要なデータと関数を取り出す。
- * 2. アプリ全体の最外殻レイアウト（背景のグラデーション、幅制限コンテナなど）の定義。
- * 3. `BoardHeader`, `TaskForm`, `KanbanLane` などのコンポーネントに必要なデータ（Props）を流し込みながら配置する。
- * 4. 各レーン（TODO/進行中/完了）の設定情報（アイコンや色）を定義し、ループでレーンを描画する。
- *
- * ==========================================
- * 【Propsの意味】
- * ==========================================
- * ※ このファイルはルートとなるページコンポーネント（Next.jsのエントリーポイント）であるため、
- * 　 外部から受け取るPropsはありません。
- *
- * ==========================================
- * 【State（内部状態）の役割】
- * ==========================================
- * ※ このコンポーネント自身の内部Stateは 0個 です。
- * 　 すべての状態管理（データ・テーマ・ドラッグ等）は、カスタムフック `useKanban` の中に隠蔽されています。
- * 　 これにより、画面の結合コードが驚くほどシンプルで読みやすくなっています。
- */
-
-export default function KanbanPage() {
-  // --- カスタムフックから「頭脳（ロジックと状態）」をすべて取り出す ---
-  const {
-    tasks,
-    inputValue,
-    setInputValue,
-    isDarkMode,
-    isMounted,
-    draggedOverLane,
-    handleAddTask,
-    deleteTask,
-    updateTaskStatus,
-    editTaskTitle,
-    clearCompletedTasks,
-    toggleDarkMode,
-    dragHandlers,
-  } = useKanban();
-
-  // --- 3つのレーン（列）の個別設定情報 ---
-  const lanes: LaneConfig[] = [
-    {
-      id: "TODO",
-      title: "未着手",
-      accentClass: "bg-blue-600 dark:bg-blue-500",
-      icon: <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
-    },
-    {
-      id: "IN_PROGRESS",
-      title: "進行中",
-      accentClass: "bg-amber-600 dark:bg-amber-500",
-      icon: <Layers className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
-    },
-    {
-      id: "DONE",
-      title: "完了",
-      accentClass: "bg-emerald-600 dark:bg-emerald-500",
-      icon: <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
-    },
-  ];
-
-  // ハイドレーションの不整合（サーバーとクライアントの初期表示のズレ）を防ぐためのガード。
-  // Reactがブラウザにマウントされるまでは何もレンダリングせず、マウント後に画面を安全に描画します。
-  if (!isMounted) return null;
+export default async function HomePage() {
+  const session = await auth();
+  if (session) redirect("/app");
 
   return (
-    <div className="app-bg min-h-screen w-full p-4 sm:p-6 md:p-8 font-sans">
-      
-      {/* 画面中央に幅を制御したコンテンツを配置 */}
-      <div className="max-w-7xl mx-auto flex flex-col gap-6 sm:gap-8">
-        
-        {/* 1. ヘッダーパーツの配置 */}
-        <BoardHeader
-          isDarkMode={isDarkMode}
-          toggleDarkMode={toggleDarkMode}
-          hasCompletedTasks={tasks.some((t) => t.status === "DONE")}
-          clearCompletedTasks={clearCompletedTasks}
-        />
+    <div
+      className="flex flex-col overflow-hidden"
+      style={{
+        height: "100dvh",
+        background: "#000",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif",
+      }}
+    >
+      {/* ── Nav ── */}
+      <nav
+        style={{
+          background: "rgba(22, 22, 23, 0.9)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+          height: "44px",
+          flexShrink: 0,
+        }}
+        className="flex items-center"
+      >
+        <div className="mx-auto flex w-full max-w-[1024px] items-center justify-between px-6">
+          <span style={{ fontSize: "12px", fontWeight: 600, color: "#f5f5f7" }}>
+            Kanban Dashboard
+          </span>
+          <Link
+            href="/login"
+            style={{ fontSize: "12px", color: "rgba(245,245,247,0.5)" }}
+            className="transition-colors hover:text-white"
+          >
+            ログイン
+          </Link>
+        </div>
+      </nav>
 
-        {/* 2. 新規タスク入力フォームパーツの配置 */}
-        <TaskForm
-          inputValue={inputValue}
-          setInputValue={setInputValue}
-          onSubmit={handleAddTask}
-        />
+      {/* ── Main: hero + steps, all in one screen ── */}
+      <main
+        className="flex flex-1 flex-col items-center justify-center gap-12 px-6 text-center"
+        style={{ paddingTop: "24px", paddingBottom: "24px", minHeight: 0 }}
+      >
+        {/* Hero copy */}
+        <div className="flex flex-col items-center gap-4">
+          <p style={{ fontSize: "15px", fontWeight: 600, color: "#2997ff", letterSpacing: "-0.2px" }}>
+            AI分類つきかんばんボード
+          </p>
 
-        {/* 3. かんばんボードグリッド（3列レーンの配置） */}
-        <main className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {lanes.map((lane) => {
-            // このレーンに対応するタスクのみをフィルタリング
-            const laneTasks = tasks.filter((task) => task.status === lane.id);
+          <h1
+            style={{
+              fontSize: "clamp(36px, 5.5vw, 72px)",
+              fontWeight: 600,
+              lineHeight: 1.07,
+              letterSpacing: "-0.28px",
+              color: "#f5f5f7",
+            }}
+          >
+            タスクを整理。
+            <br />
+            <span style={{ color: "#2997ff" }}>AIが補助。</span>
+          </h1>
 
-            return (
-              <KanbanLane
-                key={lane.id}
-                lane={lane}
-                tasks={laneTasks}
-                isDraggedOver={draggedOverLane === lane.id}
-                onDragOver={dragHandlers.handleDragOverLane}
-                onDragLeave={dragHandlers.handleDragLeaveLane}
-                onDrop={dragHandlers.handleDropLane}
-                deleteTask={deleteTask}
-                updateTaskStatus={updateTaskStatus}
-                editTaskTitle={editTaskTitle}
-                onDragStart={dragHandlers.handleDragStart}
-                onDragEnd={dragHandlers.handleDragEnd}
-              />
-            );
-          })}
-        </main>
-        
-      </div>
+          <p
+            style={{
+              fontSize: "17px",
+              fontWeight: 400,
+              lineHeight: 1.47,
+              letterSpacing: "-0.374px",
+              color: "#6e6e73",
+              maxWidth: "440px",
+            }}
+          >
+            タスクを追加するだけで、Gemini AIがカテゴリと優先度を自動推定。
+            ドラッグ＆ドロップやボタンでスマートに管理できます。
+          </p>
+
+          {/* CTAs */}
+          <div className="flex items-center gap-3">
+            <form
+              action={async () => {
+                "use server";
+                await signIn("guest", { redirectTo: "/app" });
+              }}
+            >
+              <button type="submit" className="apple-btn-primary">
+                ゲストで試す
+              </button>
+            </form>
+
+            <Link
+              href="/login"
+              style={{
+                background: "transparent",
+                color: "#2997ff",
+                borderRadius: "980px",
+                padding: "11px 21px",
+                fontSize: "17px",
+                fontWeight: 400,
+                letterSpacing: "-0.374px",
+                border: "1px solid rgba(41,151,255,0.4)",
+                whiteSpace: "nowrap",
+                display: "inline-block",
+              }}
+            >
+              アカウントでログイン
+            </Link>
+          </div>
+        </div>
+
+        {/* ── 3-step row at bottom ── */}
+        <div style={{ width: "100%", maxWidth: "1024px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "1px",
+              borderRadius: "20px",
+              overflow: "hidden",
+              background: "rgba(255,255,255,0.06)",
+            }}
+          >
+            {[
+              { num: "01", title: "ゲストで試す", desc: "ボタン1つで即スタート。メールも不要。" },
+              { num: "02", title: "タスクを追加", desc: "AIがカテゴリと優先度を自動推定。" },
+              { num: "03", title: "動かして整理", desc: "未着手 → 進行中 → 保留 → 完了。ドラッグでもボタンでもOK。" },
+            ].map((item) => (
+              <div
+                key={item.num}
+                style={{
+                  background: "#1d1d1f",
+                  padding: "20px 24px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  textAlign: "left",
+                }}
+              >
+                <span style={{ fontSize: "12px", fontWeight: 600, color: "#2997ff", letterSpacing: "-0.12px" }}>
+                  {item.num}
+                </span>
+                <h3 style={{ fontSize: "17px", fontWeight: 600, color: "#f5f5f7", lineHeight: 1.3 }}>
+                  {item.title}
+                </h3>
+                <p style={{ fontSize: "13px", fontWeight: 400, lineHeight: 1.4, color: "#6e6e73" }}>
+                  {item.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

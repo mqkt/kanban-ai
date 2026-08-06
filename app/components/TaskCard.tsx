@@ -1,8 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Task, TaskStatus } from "../types/kanban";
-import { Trash2, Edit2, X, Save, ArrowLeft, ArrowRight, Calendar, Tag, Clock, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Task, TaskStatus, TASK_STATUS_LABELS, TASK_STATUS_ORDER } from "../types/kanban";
+import { STALE_THRESHOLD_MS } from "@/lib/constants";
+import {
+  Trash2,
+  Edit2,
+  X,
+  Save,
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  Tag,
+  Loader2,
+  Flag,
+  AlertTriangle,
+} from "lucide-react";
 
 // カテゴリに応じた美しいバッジ用のカラースタイルを取得する関数
 const getCategoryStyles = (category: string) => {
@@ -15,6 +28,18 @@ const getCategoryStyles = (category: string) => {
       return "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200/50 dark:border-amber-900/30";
     case "趣味":
       return "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200/50 dark:border-rose-900/30";
+    default:
+      return "bg-slate-50 text-slate-650 dark:bg-slate-900 dark:text-slate-400 border-slate-200/50 dark:border-slate-800/80";
+  }
+};
+
+// 優先度に応じたバッジ用のカラースタイルを取得する関数
+const getPriorityStyles = (priority: string) => {
+  switch (priority) {
+    case "高":
+      return "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 border-red-200/50 dark:border-red-900/30";
+    case "中":
+      return "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200/50 dark:border-amber-900/30";
     default:
       return "bg-slate-50 text-slate-650 dark:bg-slate-900 dark:text-slate-400 border-slate-200/50 dark:border-slate-800/80";
   }
@@ -113,6 +138,29 @@ export default function TaskCard({
     return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
   };
 
+  // Date.now() はレンダー中に直接呼べない（純粋性ルール）ため、useStateの遅延初期化子として
+  // マウント時に取得し、以降は1時間ごとにタイマーで更新する。マウント時の一度きりの取得だと、
+  // タブを開きっぱなしにしたまま日をまたいでも停滞判定が更新されないため。
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 完了タスクは「停滞」ではないので対象外。updatedAtが無い（古いデータ）場合も対象外。
+  const isStale =
+    task.status !== "DONE" &&
+    task.updatedAt !== undefined &&
+    now - task.updatedAt > STALE_THRESHOLD_MS;
+
+  const currentStatusIndex = TASK_STATUS_ORDER.indexOf(task.status);
+  const previousStatus =
+    currentStatusIndex > 0 ? TASK_STATUS_ORDER[currentStatusIndex - 1] : null;
+  const nextStatus =
+    currentStatusIndex !== -1 && currentStatusIndex < TASK_STATUS_ORDER.length - 1
+      ? TASK_STATUS_ORDER[currentStatusIndex + 1]
+      : null;
+
   return (
     <div
       id={`card-${task.id}`}
@@ -177,8 +225,11 @@ export default function TaskCard({
             {task.title}
           </span>
 
-          {/* 右上の編集・削除クイックメニュー（マウスホバー時に表示が強調されます） */}
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 flex-shrink-0">
+          {/* 右上の編集・削除クイックメニュー。マウス操作ではホバー時のみ表示して見た目をすっきりさせるが、
+              タッチデバイス（hover状態を持たない）では常時表示にする。ホバー不可の判定には
+              ビューポート幅ではなく `(hover: none)` メディア特性を使い、タッチ対応の大画面端末も
+              正しく「常時表示」側に倒す。 */}
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 flex-shrink-0">
             <button
               onClick={handleStartEdit}
               className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
@@ -187,7 +238,11 @@ export default function TaskCard({
               <Edit2 className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => deleteTask(task.id)}
+              onClick={() => {
+                if (window.confirm(`「${task.title}」を削除しますか？`)) {
+                  deleteTask(task.id);
+                }
+              }}
               className="p-1.5 text-slate-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
               title="削除"
             >
@@ -197,37 +252,46 @@ export default function TaskCard({
         </div>
       )}
 
-      {/* カテゴリ・想定所要時間タグの表示 */}
-      {(task.error || task.isClassifying || task.category || task.duration !== undefined) && (
+      {/* カテゴリ・優先度タグの表示 */}
+      {(task.error || task.isClassifying || task.category || task.priority) && (
         <div className="flex flex-wrap gap-1.5 items-center select-none pt-1">
           {task.error ? (
             <span
-              className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md border bg-red-50/60 text-red-600 dark:bg-red-950/20 dark:text-red-400 border-red-200/50 dark:border-red-900/30"
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border bg-red-50/60 text-red-600 dark:bg-red-950/20 dark:text-red-400 border-red-200/50 dark:border-red-900/30"
               title={typeof task.error === "string" ? task.error : "AI分析に失敗しました"}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
               <span>⚠️ AI分析エラー</span>
             </span>
           ) : task.isClassifying ? (
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md border bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30 animate-pulse">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30 animate-pulse">
               <Loader2 className="w-3 h-3 animate-spin text-blue-600 dark:text-blue-400" />
               <span>🤖 AI分析中...</span>
             </span>
           ) : (
             <>
               {task.category && (
-                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors ${getCategoryStyles(task.category)}`}>
+                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border transition-colors ${getCategoryStyles(task.category)}`}>
                   <Tag className="w-3 h-3" />
                   {task.category}
                 </span>
               )}
-              {task.duration !== undefined && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border bg-slate-50 dark:bg-slate-950/60 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800">
-                  <Clock className="w-3.5 h-3.5" />
-                  {task.duration} 分
+              {task.priority && (
+                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border transition-colors ${getPriorityStyles(task.priority)}`}>
+                  <Flag className="w-3 h-3" />
+                  優先度: {task.priority}
                 </span>
               )}
             </>
+          )}
+          {isStale && (
+            <span
+              className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-400 border-sky-200/50 dark:border-sky-900/30"
+              title="3日以上ステータスが変わっていません"
+            >
+              <AlertTriangle className="w-3 h-3" />
+              停滞中
+            </span>
           )}
         </div>
       )}
@@ -244,39 +308,29 @@ export default function TaskCard({
         {/* クイック移動ボタン（編集モード中は非表示） */}
         {!isEditing && (
           <div className="flex items-center gap-1">
-            {/* 左へ移動できるボタン（TODOステータス以外の時に表示） */}
-            {task.status !== "TODO" && (
+            {/* 左（前）のレーンへ移動できるボタン（先頭レーンでは非表示） */}
+            {previousStatus && (
               <button
-                onClick={() =>
-                  updateTaskStatus(
-                    task.id,
-                    task.status === "DONE" ? "IN_PROGRESS" : "TODO"
-                  )
-                }
+                onClick={() => updateTaskStatus(task.id, previousStatus)}
                 className="p-1 flex items-center gap-0.5 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 rounded hover:bg-slate-50 dark:hover:bg-slate-850 border border-slate-200/50 dark:border-slate-800/80 transition-colors duration-250 cursor-pointer"
                 title="左のレーンへ移動"
               >
                 <ArrowLeft className="w-3 h-3" />
                 <span className="text-[9px] font-bold">
-                  {task.status === "DONE" ? "進行中" : "未着手"}
+                  {TASK_STATUS_LABELS[previousStatus]}
                 </span>
               </button>
             )}
-            
-            {/* 右へ移動できるボタン（DONEステータス以外の時に表示） */}
-            {task.status !== "DONE" && (
+
+            {/* 右（次）のレーンへ移動できるボタン（末尾レーンでは非表示） */}
+            {nextStatus && (
               <button
-                onClick={() =>
-                  updateTaskStatus(
-                    task.id,
-                    task.status === "TODO" ? "IN_PROGRESS" : "DONE"
-                  )
-                }
+                onClick={() => updateTaskStatus(task.id, nextStatus)}
                 className="p-1 flex items-center gap-0.5 text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 rounded hover:bg-slate-50 dark:hover:bg-slate-850 border border-slate-200/50 dark:border-slate-800/80 transition-colors duration-250 cursor-pointer"
                 title="右のレーンへ移動"
               >
                 <span className="text-[9px] font-bold">
-                  {task.status === "TODO" ? "進行中" : "完了"}
+                  {TASK_STATUS_LABELS[nextStatus]}
                 </span>
                 <ArrowRight className="w-3 h-3" />
               </button>
