@@ -3,7 +3,6 @@ import Google from "next-auth/providers/google";
 import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { GUEST_EMAIL_DOMAIN, GUEST_TTL_MS } from "@/lib/guest";
 
@@ -12,42 +11,13 @@ import { GUEST_EMAIL_DOMAIN, GUEST_TTL_MS } from "@/lib/guest";
 // 訪問者ごとにデータを隔離する（API側の where:{ userId } がそのまま効く）。
 // guestExpiresAt を付けておき、期限切れは cleanup-guests で自動削除する。
 async function createGuestUser() {
-  const user = await prisma.user.create({
+  return prisma.user.create({
     data: {
       email: `guest-${crypto.randomUUID()}@${GUEST_EMAIL_DOMAIN}`,
       name: "ゲストユーザー",
       guestExpiresAt: new Date(Date.now() + GUEST_TTL_MS),
     },
   });
-
-  // 初期ボードが空だと体験が伝わりにくいので、サンプルタスクを投入する。
-  await prisma.task.createMany({
-    data: [
-      {
-        userId: user.id,
-        title: "企画書のドラフトを作成する",
-        status: TaskStatus.TODO,
-        category: "ドキュメント",
-        priority: "中",
-      },
-      {
-        userId: user.id,
-        title: "デザインカンプをレビューする",
-        status: TaskStatus.IN_PROGRESS,
-        category: "デザイン",
-        priority: "高",
-      },
-      {
-        userId: user.id,
-        title: "キックオフMTGの議事録を共有",
-        status: TaskStatus.DONE,
-        category: "コミュニケーション",
-        priority: "低",
-      },
-    ],
-  });
-
-  return user;
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
