@@ -37,7 +37,7 @@ AI によるタスク分類・優先度推定を備えた、Next.js 製のかん
 ### 生成されたコードの検証方法
 
 - **型・静的解析**: `npx tsc --noEmit` と `npm run lint`（ESLint）を各変更後に実行
-- **自動テスト**: `npm run test`（Vitest）でバリデーションスキーマ・APIルート（認証・所有権チェック・Zodの境界値・トランザクション周り）・フォームコンポーネントを検証。GitHub Actions CI（`ci.yml`）にも `lint` → `test` → `build` の順で組み込み済み
+- **自動テスト**: ユニットテストと結合テストを分離している。`npm run test`（Vitest、`vi.mock`でPrismaを全面モック）はバリデーションスキーマ・APIルートが「どんな形のクエリを発行しようとしたか」・フォームコンポーネントを高速に検証する一方、モックである以上「実際にPostgres上で正しい行が読み書きされるか」は検証できない。そこで `npm run test:integration`（`vitest.integration.config.mts`、Prismaは実クライアントのまま・`@/auth`のみモック）を別に用意し、他ユーザーのタスクへの越境アクセス防止・`$transaction`の再取得結果・keysetページネーション（cursor行が削除された後も正しく次ページを返すか）を実DBに対して検証している。専用の使い捨てDB（`docker-compose.yml`の`test-db`、tmpfsで非永続化）を使い、`vitest.integration.setup.ts`で開発用DBを誤って対象にしないようDB名に`test`を含むことを強制するガードを入れている。GitHub Actions CI（`ci.yml`）では `lint-and-build`（lint → unit test → build）と並行して、Postgresサービスコンテナ上で `integration-test` ジョブを実行
 - **ビルド**: `npm run build`（Next.js本番ビルド + `prisma generate`）が通ることを都度確認
 - **実機確認**: Claude Codeのブラウザ操作機能で実際にdevサーバーを起動し、ゲストログイン → タスク追加（バリデーションエラー表示 → 正常系 → AI自動分類）→ ネットワークログ・コンソールエラーの確認、まで一通り操作して検証。API応答やレスポンスヘッダー（`Cache-Control` など）もネットワークログで確認
 - **インフラ**: Terraformの変更は `terraform validate` / `terraform plan` で構文・整合性を確認。実際のクラウドリソースを変更する `apply` / `destroy` は行っていない（上記の通り人間側の操作）
@@ -58,6 +58,14 @@ NextAuthはセッションCookieに `SameSite=Lax` を使用し、`/api/auth/*` 
 - これらのエンドポイントは `Content-Type: application/json` の `fetch` リクエストのみを受け付けており、これは素の `<form>` タグでは再現できない（simple requestの条件を満たさずCORSプリフライトの対象になる）
 - ゲストログイン（Credentials providerの `authorize()`）は入力を一切受け取らず新規ゲストユーザーを作るだけの処理なので、CSRFで既存ユーザーのログイン状態を乗っ取る攻撃は成立しない
 
+### CSP（Content Security Policy）
+
+`proxy.ts`（Next.js 16でmiddlewareから改称されたリクエストフック。同じファイルで認証チェック・レートリミットも行っているため統合）でリクエストごとにnonceを発行し、`script-src`に `'unsafe-inline'` を使わずnonceベースのCSPを配布している。ダークモードのちらつき防止用インラインscript（`app/layout.tsx`）はこのnonceを検証に通した上でのみ実行を許可される。`script-src`には`'strict-dynamic'`も付与し、nonceを持つスクリプトが動的に読み込むスクリプトのみ許可（ホスト名ベースの許可リストは無視される、nonce対応ブラウザ向けのモダンな構成）。外部スクリプト・外部フォントを読み込んでいない構成（`next/font`はビルド時にセルフホスト、Google認証はサーバー側リダイレクト）のため、`connect-src`等を緩める必要がなく `default-src 'self'` を素直に適用できている。
+
+`connect-src`は`'self'`に加え`https://*.sentry.io`を許可している。`instrumentation-client.ts`でクライアント側Sentry（`NEXT_PUBLIC_SENTRY_DSN`設定時のみ有効）がエラーレポートをSentryのingestエンドポイントへ送るため、これを許可しないと本番でDSNを設定した瞬間にCSPがエラーレポート送信をブロックし、気づかれないまま可観測性が失われる。
+
+`style-src`は`'self' 'unsafe-inline'`のまま緩めている。XSSの実害はほぼ`script-src`（任意コード実行）側で決まり、CSS注入の被害は限定的（見た目の改ざんや一部の情報詮索に留まる）なので費用対効果が低いことに加え、`next dev`（Turbopack）のHMRがCSSチャンクをnonceなしのインライン`<style>`で差し込むため、`style-src`を厳格化すると開発時に無害な違反ログが大量に出て本来見るべきエラーを埋もれさせてしまう。本番ビルド（`next start`）ではCSP・機能とも正常動作をブラウザで確認済み（コンソールエラーなし、AI自動分類を含むタスク追加フローも問題なし）。
+
 ### レートリミット
 
 `lib/rateLimit.ts` にプロセス内メモリでの固定ウィンドウ・レートリミット（`proxy.ts` で `${IP}:${パス}` をキーに、1エンドポイントあたり1分間60リクエストまで）を実装しています。Upstash Redis等の外部ストアを使えばCloud Runがマルチインスタンスに増えても正確に制限できますが、このアプリの規模では追加のインフラ・運用コストに見合わないと判断し、まずはインメモリ実装で単一クライアントからの連打・悪用を防ぐことを優先しました。認識している限界:
@@ -73,6 +81,10 @@ NextAuthはセッションCookieに `SameSite=Lax` を使用し、`/api/auth/*` 
 ### ページネーション
 
 `GET /api/tasks` は `cursor` / `limit` によるページネーションに対応しています。Prisma組み込みの `cursor` オプション（対象行が実在している前提）ではなく、`createdAt` + `id` の値そのものをエンコードしたkeyset方式にしているのがポイントです。前者だと、ページ取得の合間にcursor行が削除された場合（例: 完了タスクの一括削除）に空配列が返り、以降のタスクが黙って取得不能になるバグがありました。値ベースの比較にすることで、対象行の削除に影響されずページングを継続できます。現状のUXである「レーンに全件表示」は変えたくなかったため、`useKanban.ts` の初期読み込みは `nextCursor` がある限り自動で全ページを取得して結合する形にとどめ、無限スクロールUI自体は今回のスコープ外としています。
+
+### N+1回避
+
+このアプリのAPIは、いずれもタスク一覧を1回の `findMany` で取得して返すだけで、取得した各行に対してループで追加クエリを発行する箇所がありません（`select` で必要なカラムのみ絞り込み）。タスクに紐づく関連データ（コメント・添付など）を画面ごとに個別取得するような構造ではないため、N+1が原理的に発生しない設計になっています。将来、タスクに関連エンティティを追加する場合は `include` の乱用でここが崩れやすいため、追加時は発行されるクエリ数を確認する運用にしています。
 
 ### DBトランザクション
 
@@ -200,11 +212,12 @@ npm run dev
 ### 利用できる npm scripts
 
 ```bash
-npm run dev     # 開発サーバーを起動
-npm run build   # 本番ビルドを作成
-npm run start   # 本番ビルドを起動
-npm run lint    # ESLint を実行
-npm run test    # Vitest でテストを実行
+npm run dev              # 開発サーバーを起動
+npm run build            # 本番ビルドを作成
+npm run start            # 本番ビルドを起動
+npm run lint             # ESLint を実行
+npm run test             # Vitest でユニットテストを実行（Prismaはモック）
+npm run test:integration # 実DB（要 `docker compose up -d test-db`）に対する結合テストを実行
 ```
 
 ### Docker での起動

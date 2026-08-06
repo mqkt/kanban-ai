@@ -4,7 +4,39 @@ import { isRateLimited } from "@/lib/rateLimit";
 
 const protectedPrefixes = ["/api/tasks", "/api/classify", "/api/triage"];
 
+// nonceベースのCSPを配布する。'unsafe-inline'を使わずインラインscript/styleを許可するため、
+// リクエストごとに乱数のnonceを発行し、layout.tsx側のインラインscriptタグに埋め込んで照合する。
+function buildCspHeader(nonce: string) {
+  return `
+    default-src 'self';
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' blob: data:;
+    font-src 'self';
+    connect-src 'self' https://*.sentry.io;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    upgrade-insecure-requests;
+  `
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+// ページ描画に進む（= layout.tsxがnonceを読んでインラインscriptに埋め込む）レスポンスにのみ、
+// x-nonceをリクエストヘッダー経由で伝搬する。redirect/json応答はHTMLを描画しないため対象外。
+function next(request: NextRequest, nonce: string) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", buildCspHeader(nonce));
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const { pathname } = request.nextUrl;
 
   // 旧 /app ルートへの古いブックマーク・リンク向けの互換リダイレクト。
@@ -18,7 +50,7 @@ export async function proxy(request: NextRequest) {
   );
 
   if (!isProtected) {
-    return NextResponse.next();
+    return next(request, nonce);
   }
 
   if (pathname.startsWith("/api/")) {
@@ -41,7 +73,7 @@ export async function proxy(request: NextRequest) {
   });
 
   if (token) {
-    return NextResponse.next();
+    return next(request, nonce);
   }
 
   // protectedPrefixes は現在すべて /api/ 配下なので、常にJSONで401を返す
@@ -50,5 +82,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/api/tasks/:path*", "/api/classify", "/api/triage"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
