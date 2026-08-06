@@ -95,21 +95,11 @@ export default function KanbanLane({
             {lane.title}
           </h2>
         </div>
-        {/* レーン内のタスク数カウンター（WIP制限があるレーンでは "現在数 / 上限" 表示にし、
-            上限に達している場合は警告色に切り替える） */}
+        {/* レーン内のタスク数カウンター */}
         <span
-          className={`px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-sm ${
-            lane.wipLimit !== undefined && tasks.length >= lane.wipLimit
-              ? "bg-red-600 dark:bg-red-500"
-              : lane.accentClass
-          }`}
-          title={
-            lane.wipLimit !== undefined
-              ? `WIP制限: 同時に${lane.wipLimit}件まで`
-              : undefined
-          }
+          className={`px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-sm ${lane.accentClass}`}
         >
-          {lane.wipLimit !== undefined ? `${tasks.length} / ${lane.wipLimit}` : tasks.length}
+          {tasks.length}
         </span>
       </div>
 

@@ -11,8 +11,6 @@ const txMock = {
   task: {
     updateMany: vi.fn(),
     findUniqueOrThrow: vi.fn(),
-    findFirst: vi.fn(),
-    count: vi.fn(),
   },
 };
 
@@ -167,27 +165,7 @@ describe("PATCH /api/tasks", () => {
     expect(body.task.status).toBe("DONE");
   });
 
-  it("rejects moving a task to IN_PROGRESS once the WIP limit is reached, without updating it", async () => {
-    txMock.task.findFirst.mockResolvedValue({ status: TaskStatus.TODO });
-    txMock.task.count.mockResolvedValue(5); // IN_PROGRESS_WIP_LIMIT
-
-    const response = await PATCH(
-      new Request("http://localhost/api/tasks", {
-        method: "PATCH",
-        body: JSON.stringify({ id: "task-1", status: "IN_PROGRESS" }),
-      })
-    );
-
-    expect(txMock.task.count).toHaveBeenCalledWith({
-      where: { userId: "user-1", status: TaskStatus.IN_PROGRESS },
-    });
-    expect(txMock.task.updateMany).not.toHaveBeenCalled();
-    expect(response.status).toBe(409);
-  });
-
-  it("allows moving a task to IN_PROGRESS when under the WIP limit", async () => {
-    txMock.task.findFirst.mockResolvedValue({ status: TaskStatus.TODO });
-    txMock.task.count.mockResolvedValue(4);
+  it("moves a task to IN_PROGRESS with no WIP-style limit check", async () => {
     txMock.task.updateMany.mockResolvedValue({ count: 1 });
     txMock.task.findUniqueOrThrow.mockResolvedValue({
       ...baseTask,
@@ -201,25 +179,6 @@ describe("PATCH /api/tasks", () => {
       })
     );
 
-    expect(response.status).toBe(200);
-  });
-
-  it("does not re-check the WIP limit when a task already IN_PROGRESS is patched with another field", async () => {
-    txMock.task.findFirst.mockResolvedValue({ status: TaskStatus.IN_PROGRESS });
-    txMock.task.updateMany.mockResolvedValue({ count: 1 });
-    txMock.task.findUniqueOrThrow.mockResolvedValue({
-      ...baseTask,
-      status: TaskStatus.IN_PROGRESS,
-    });
-
-    const response = await PATCH(
-      new Request("http://localhost/api/tasks", {
-        method: "PATCH",
-        body: JSON.stringify({ id: "task-1", status: "IN_PROGRESS" }),
-      })
-    );
-
-    expect(txMock.task.count).not.toHaveBeenCalled();
     expect(response.status).toBe(200);
   });
 });

@@ -8,7 +8,6 @@ import {
   deleteTaskSchema,
   updateTaskSchema,
 } from "@/lib/validation/task";
-import { IN_PROGRESS_WIP_LIMIT } from "@/lib/constants";
 
 export const runtime = "nodejs";
 
@@ -170,57 +169,27 @@ export async function PATCH(request: Request) {
 
   // updateMany による所有権チェックと再取得を1トランザクションにまとめ、
   // 両クエリの間に別リクエストが割り込む TOCTOU ギャップを閉じる。
-  // IN_PROGRESSへの遷移時はWIP制限もここで強制する（クライアント側の制限は
-  // UXのための早期ブロックに過ぎず、複数タブや直接APIを叩く経路をこちらで塞ぐ）。
-  const result = await prisma.$transaction(async (tx) => {
-    if (data.status === TaskStatus.IN_PROGRESS) {
-      const current = await tx.task.findFirst({
-        where: { id, userId },
-        select: { status: true },
-      });
-
-      if (!current) {
-        return { kind: "not_found" as const };
-      }
-
-      if (current.status !== TaskStatus.IN_PROGRESS) {
-        const inProgressCount = await tx.task.count({
-          where: { userId, status: TaskStatus.IN_PROGRESS },
-        });
-        if (inProgressCount >= IN_PROGRESS_WIP_LIMIT) {
-          return { kind: "wip_limit" as const };
-        }
-      }
-    }
-
+  const task = await prisma.$transaction(async (tx) => {
     const updateResult = await tx.task.updateMany({
       where: { id, userId },
       data,
     });
 
     if (updateResult.count === 0) {
-      return { kind: "not_found" as const };
+      return null;
     }
 
-    const task = await tx.task.findUniqueOrThrow({
+    return tx.task.findUniqueOrThrow({
       where: { id },
       select: taskSelect,
     });
-    return { kind: "ok" as const, task };
   });
 
-  if (result.kind === "wip_limit") {
-    return NextResponse.json(
-      { error: `進行中レーンは同時に${IN_PROGRESS_WIP_LIMIT}件までです。` },
-      { status: 409 }
-    );
-  }
-
-  if (result.kind === "not_found") {
+  if (!task) {
     return NextResponse.json({ error: "Task not found." }, { status: 404 });
   }
 
-  return NextResponse.json({ task: serializeTask(result.task) });
+  return NextResponse.json({ task: serializeTask(task) });
 }
 
 export async function DELETE(request: Request) {
