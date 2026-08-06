@@ -10,9 +10,9 @@ type LoginPageProps = {
 };
 
 function safeCallbackUrl(value?: string) {
-  if (!value) return "/app";
+  if (!value) return "/";
   if (value.startsWith("/") && !value.startsWith("//")) return value;
-  return "/app";
+  return "/";
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -20,7 +20,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const callbackUrl = safeCallbackUrl(params?.callbackUrl);
 
-  if (session) {
+  // ゲストセッションはこの画面を素通りさせない。自動開始したゲストが
+  // Google/メールで正式アカウントに切り替えられるようにするため。
+  // すでに正式ログイン済みの場合だけ、フォームを見せずリダイレクトする。
+  if (session && !session.user.isGuest) {
     redirect(callbackUrl);
   }
 
@@ -32,7 +35,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          トップへ戻る
+          戻る
         </Link>
 
         <div className="mb-7">
@@ -112,7 +115,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </button>
         </form>
         <p className="mt-3 text-center text-xs font-medium text-slate-400">
-          ログイン不要でサンプルデータをすぐ体験できます。
+          ログイン不要ですぐに使い始められます。
         </p>
       </section>
     </main>

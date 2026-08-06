@@ -2,10 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { isRateLimited } from "@/lib/rateLimit";
 
-const protectedPrefixes = ["/app", "/api/tasks", "/api/classify", "/api/triage"];
+const protectedPrefixes = ["/api/tasks", "/api/classify", "/api/triage"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 旧 /app ルートへの古いブックマーク・リンク向けの互換リダイレクト。
+  // ボードは「/」に統合され、認証状態に応じた出し分けはページ側で行う。
+  if (pathname === "/app" || pathname.startsWith("/app/")) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   const isProtected = protectedPrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
@@ -37,16 +44,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const signInUrl = new URL("/login", request.url);
-  signInUrl.searchParams.set(
-    "callbackUrl",
-    `${request.nextUrl.pathname}${request.nextUrl.search}`
-  );
-  return NextResponse.redirect(signInUrl);
+  // protectedPrefixes は現在すべて /api/ 配下なので、常にJSONで401を返す
+  // （ページ遷移としてログイン画面へリダイレクトする必要はない）。
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
 export const config = {

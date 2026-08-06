@@ -3,21 +3,24 @@
 import { useKanban } from "../hooks/useKanban";
 import { useTriage } from "../hooks/useTriage";
 import { LaneConfig } from "../types/kanban";
-import { IN_PROGRESS_WIP_LIMIT } from "@/lib/constants";
 import { Clock, Layers, CheckCircle, Hourglass } from "lucide-react";
-import BoardHeader from "../components/BoardHeader";
-import TaskForm from "../components/TaskForm";
-import KanbanLane from "../components/KanbanLane";
-import TriagePanel from "../components/TriagePanel";
+import BoardHeader from "./BoardHeader";
+import TaskForm from "./TaskForm";
+import KanbanLane from "./KanbanLane";
+import TriagePanel from "./TriagePanel";
+import AboutSection from "./AboutSection";
 
-export default function KanbanAppPage() {
+interface KanbanBoardProps {
+  isGuest: boolean;
+}
+
+export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
   const {
     tasks,
     isDarkMode,
     isMounted,
     isLoading,
     loadError,
-    wipWarning,
     draggedOverLane,
     addTask,
     deleteTask,
@@ -51,7 +54,6 @@ export default function KanbanAppPage() {
       title: "進行中",
       accentClass: "bg-amber-600 dark:bg-amber-500",
       icon: <Layers className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
-      wipLimit: IN_PROGRESS_WIP_LIMIT,
     },
     {
       id: "PENDING",
@@ -77,17 +79,12 @@ export default function KanbanAppPage() {
           toggleDarkMode={toggleDarkMode}
           hasCompletedTasks={tasks.some((t) => t.status === "DONE")}
           clearCompletedTasks={clearCompletedTasks}
+          isGuest={isGuest}
         />
 
         {loadError && (
           <div className="panel-card border-red-200/70 dark:border-red-900/40 px-4 py-3 text-sm font-semibold text-red-600 dark:text-red-400">
             {loadError}
-          </div>
-        )}
-
-        {wipWarning && (
-          <div className="panel-card border-amber-200/70 dark:border-amber-900/40 px-4 py-3 text-sm font-semibold text-amber-600 dark:text-amber-400">
-            {wipWarning}
           </div>
         )}
 
@@ -134,6 +131,8 @@ export default function KanbanAppPage() {
             })}
           </main>
         )}
+
+        <AboutSection />
       </div>
     </div>
   );
