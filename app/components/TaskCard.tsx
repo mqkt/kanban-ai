@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Task, TaskStatus, TASK_STATUS_LABELS, TASK_STATUS_ORDER } from "../types/kanban";
 import { STALE_THRESHOLD_MS } from "@/lib/constants";
+import { TASK_CATEGORIES } from "@/lib/validation/task";
 import {
   Trash2,
   Edit2,
@@ -97,6 +98,7 @@ interface TaskCardProps {
   task: Task;
   deleteTask: (id: string) => void;
   updateTaskStatus: (id: string, status: TaskStatus) => void;
+  updateTaskCategory: (id: string, category: string | null) => void;
   editTaskTitle: (id: string, title: string) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragEnd: (e: React.DragEvent, id: string) => void;
@@ -106,6 +108,7 @@ export default function TaskCard({
   task,
   deleteTask,
   updateTaskStatus,
+  updateTaskCategory,
   editTaskTitle,
   onDragStart,
   onDragEnd,
@@ -253,48 +256,61 @@ export default function TaskCard({
       )}
 
       {/* カテゴリ・優先度タグの表示 */}
-      {(task.error || task.isClassifying || task.category || task.priority) && (
-        <div className="flex flex-wrap gap-1.5 items-center select-none pt-1">
-          {task.error ? (
-            <span
-              className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border bg-red-50/60 text-red-600 dark:bg-red-950/20 dark:text-red-400 border-red-200/50 dark:border-red-900/30"
-              title={typeof task.error === "string" ? task.error : "AI分析に失敗しました"}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-              <span>⚠️ AI分析エラー</span>
+      <div className="flex flex-wrap gap-1.5 items-center select-none pt-1">
+        {task.error ? (
+          <span
+            className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border bg-red-50/60 text-red-600 dark:bg-red-950/20 dark:text-red-400 border-red-200/50 dark:border-red-900/30"
+            title={typeof task.error === "string" ? task.error : "AI分析に失敗しました"}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            <span>⚠️ AI分析エラー</span>
+          </span>
+        ) : task.isClassifying ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30 animate-pulse">
+            <Loader2 className="w-3 h-3 animate-spin text-blue-600 dark:text-blue-400" />
+            <span>🤖 AI分析中...</span>
+          </span>
+        ) : (
+          <>
+            {/* カテゴリはAIが自動分類するだけでなく、ここで手動でも変更できる。
+                自由入力ではなくTASK_CATEGORIESの固定選択肢にすることで、絞り込み・色分けと
+                整合させている（表記ゆれで同じ意味のカテゴリが増えるのを防ぐ）。 */}
+            <span className={`inline-flex items-center gap-1 text-xs font-bold pl-2 pr-1 py-0.5 rounded-md border transition-colors ${getCategoryStyles(task.category ?? "")}`}>
+              <Tag className="w-3 h-3" />
+              <select
+                value={task.category ?? ""}
+                onChange={(e) => updateTaskCategory(task.id, e.target.value || null)}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-transparent border-none outline-none cursor-pointer appearance-none pr-0.5"
+                title="カテゴリを変更"
+                aria-label="カテゴリを変更"
+              >
+                <option value="">未分類</option>
+                {TASK_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
             </span>
-          ) : task.isClassifying ? (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30 animate-pulse">
-              <Loader2 className="w-3 h-3 animate-spin text-blue-600 dark:text-blue-400" />
-              <span>🤖 AI分析中...</span>
-            </span>
-          ) : (
-            <>
-              {task.category && (
-                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border transition-colors ${getCategoryStyles(task.category)}`}>
-                  <Tag className="w-3 h-3" />
-                  {task.category}
-                </span>
-              )}
-              {task.priority && (
-                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border transition-colors ${getPriorityStyles(task.priority)}`}>
-                  <Flag className="w-3 h-3" />
-                  優先度: {task.priority}
-                </span>
-              )}
-            </>
-          )}
-          {isStale && (
-            <span
-              className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-400 border-sky-200/50 dark:border-sky-900/30"
-              title="3日以上ステータスが変わっていません"
-            >
-              <AlertTriangle className="w-3 h-3" />
-              停滞中
-            </span>
-          )}
-        </div>
-      )}
+            {task.priority && (
+              <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border transition-colors ${getPriorityStyles(task.priority)}`}>
+                <Flag className="w-3 h-3" />
+                優先度: {task.priority}
+              </span>
+            )}
+          </>
+        )}
+        {isStale && (
+          <span
+            className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-400 border-sky-200/50 dark:border-sky-900/30"
+            title="3日以上ステータスが変わっていません"
+          >
+            <AlertTriangle className="w-3 h-3" />
+            停滞中
+          </span>
+        )}
+      </div>
 
       {/* フッター領域: 日付とクイック移動ボタン */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-850/60 text-[10px] text-slate-400 dark:text-slate-500 select-none">

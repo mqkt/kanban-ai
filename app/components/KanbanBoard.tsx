@@ -1,9 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useKanban } from "../hooks/useKanban";
 import { useTriage } from "../hooks/useTriage";
 import { LaneConfig } from "../types/kanban";
-import { Clock, Layers, CheckCircle, Hourglass } from "lucide-react";
+import { Clock, Layers, CheckCircle, Hourglass, Filter, X } from "lucide-react";
 import BoardHeader from "./BoardHeader";
 import TaskForm from "./TaskForm";
 import KanbanLane from "./KanbanLane";
@@ -25,6 +26,7 @@ export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
     addTask,
     deleteTask,
     updateTaskStatus,
+    updateTaskCategory,
     editTaskTitle,
     mergeTasks,
     clearCompletedTasks,
@@ -33,6 +35,18 @@ export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
   } = useKanban();
 
   const triage = useTriage();
+
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+
+  // 実際にタスクで使われているカテゴリだけをフィルタ候補として出す
+  // （固定5択を常に出すと、使っていないカテゴリまで表示されて絞り込みの意味が薄れるため）。
+  const availableCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(tasks.map((task) => task.category).filter((c): c is string => Boolean(c)))
+      ).sort(),
+    [tasks]
+  );
 
   const handleMergeSuggestion = async (index: number) => {
     const suggestion = triage.suggestions[index];
@@ -103,6 +117,41 @@ export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
           />
         )}
 
+        {!isLoading && availableCategories.length > 0 && (
+          <div className="panel-card px-4 py-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+              <Filter className="w-3.5 h-3.5" />
+              カテゴリで絞り込み
+            </span>
+            {availableCategories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() =>
+                  setCategoryFilter((prev) => (prev === category ? null : category))
+                }
+                className={`text-xs font-bold px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
+                  categoryFilter === category
+                    ? "bg-blue-600 border-blue-600 text-white"
+                    : "border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+            {categoryFilter && (
+              <button
+                type="button"
+                onClick={() => setCategoryFilter(null)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+                クリア
+              </button>
+            )}
+          </div>
+        )}
+
         {isLoading ? (
           <main className="panel-card p-8 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">
             タスクを読み込んでいます...
@@ -110,7 +159,11 @@ export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
         ) : (
           <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
             {lanes.map((lane) => {
-              const laneTasks = tasks.filter((task) => task.status === lane.id);
+              const laneTasks = tasks.filter(
+                (task) =>
+                  task.status === lane.id &&
+                  (!categoryFilter || task.category === categoryFilter)
+              );
 
               return (
                 <KanbanLane
@@ -123,6 +176,7 @@ export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
                   onDrop={dragHandlers.handleDropLane}
                   deleteTask={deleteTask}
                   updateTaskStatus={updateTaskStatus}
+                  updateTaskCategory={updateTaskCategory}
                   editTaskTitle={editTaskTitle}
                   onDragStart={dragHandlers.handleDragStart}
                   onDragEnd={dragHandlers.handleDragEnd}

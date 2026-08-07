@@ -51,6 +51,16 @@ describe("createTaskSchema", () => {
     const result = createTaskSchema.safeParse({ title: "タスク", priority: "緊急" });
     expect(result.success).toBe(false);
   });
+
+  it("accepts a valid category", () => {
+    const result = createTaskSchema.safeParse({ title: "タスク", category: "趣味" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a category outside the fixed set (no free text)", () => {
+    const result = createTaskSchema.safeParse({ title: "タスク", category: "旅行" });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("updateTaskSchema", () => {

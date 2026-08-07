@@ -58,6 +58,7 @@ interface KanbanLaneProps {
   onDrop: (e: React.DragEvent, laneId: TaskStatus) => void;
   deleteTask: (id: string) => void;
   updateTaskStatus: (id: string, newStatus: TaskStatus) => void;
+  updateTaskCategory: (id: string, category: string | null) => void;
   editTaskTitle: (id: string, newTitle: string) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragEnd: (e: React.DragEvent, id: string) => void;
@@ -72,6 +73,7 @@ export default function KanbanLane({
   onDrop,
   deleteTask,
   updateTaskStatus,
+  updateTaskCategory,
   editTaskTitle,
   onDragStart,
   onDragEnd,
@@ -123,6 +125,7 @@ export default function KanbanLane({
               task={task}
               deleteTask={deleteTask}
               updateTaskStatus={updateTaskStatus}
+              updateTaskCategory={updateTaskCategory}
               editTaskTitle={editTaskTitle}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
