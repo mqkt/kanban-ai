@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Sun, Moon, Trash2, Sparkles, LogOut, LogIn } from "lucide-react";
+import { Sun, Moon, Trash2, ListChecks, LogOut, LogIn } from "lucide-react";
 
 /**
  * ==========================================
@@ -65,7 +65,7 @@ export default function BoardHeader({
       {/* タイトルとサブテキストエリア */}
       <div className="flex items-center gap-3">
         <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-sm">
-          <Sparkles className="w-5 h-5" />
+          <ListChecks className="w-5 h-5" />
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
