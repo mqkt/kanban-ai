@@ -28,20 +28,17 @@ body {
 /* 共通ユーティリティクラス（デザインのシンプル化とTailwindコードの整理） */
 /* Liquid Glass (lite): LIQUID_GLASS_DESIGN.md 参照。
    backdrop-filter に何も映り込ませるものがないとガラス感が出ないため、
-   app-bg にぼかしたグラデーション（固定背景）を敷いている。 */
+   app-bg に控えめなグラデーション（固定背景）を敷いている。
+   青・紫・ピンクの複数ブロブは「いかにもAI生成SaaS」の定番パターンになって
+   しまっているため避け、既存ブランドカラー（blue-600）1色を単一光源のように
+   隅から差し込ませるだけに留めている。 */
 @utility app-bg {
   @apply bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200 transition-colors duration-300;
-  background-image:
-    radial-gradient(at 15% 10%, rgba(147, 197, 253, 0.35) 0px, transparent 50%),
-    radial-gradient(at 85% 15%, rgba(196, 181, 253, 0.3) 0px, transparent 50%),
-    radial-gradient(at 50% 90%, rgba(251, 207, 232, 0.25) 0px, transparent 50%);
+  background-image: radial-gradient(at 15% 0%, rgba(37, 99, 235, 0.07) 0px, transparent 60%);
   background-attachment: fixed;
 
   .dark & {
-    background-image:
-      radial-gradient(at 15% 10%, rgba(30, 58, 138, 0.45) 0px, transparent 50%),
-      radial-gradient(at 85% 15%, rgba(76, 29, 149, 0.4) 0px, transparent 50%),
-      radial-gradient(at 50% 90%, rgba(157, 23, 77, 0.25) 0px, transparent 50%);
+    background-image: radial-gradient(at 15% 0%, rgba(37, 99, 235, 0.16) 0px, transparent 60%);
   }
 }
 
