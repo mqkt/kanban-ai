@@ -32,7 +32,7 @@ AI によるタスク分類・優先度推定を備えた、Next.js 製のかん
 
 - **AIに任せた部分**: 各項目の具体的な実装（Zodスキーマ設計、React Hook Formへの置き換え、テストコード、Terraformの差分など）や、複数の実現方法とそのトレードオフの提示
 - **自分で判断した部分**: 技術選定そのもの。例えばテスト基盤はJestではなくVitestを選択、APIのレートリミットは外部インフラ（Upstash Redis等）を使わずインメモリ実装に留めることを選択、構造化ログもpino等のライブラリを追加せず自前の軽量JSONラッパーで十分と判断——これらはいずれもAIが選択肢とトレードオフを提示した上で、このアプリの規模・運用コストを踏まえて自分で決定した
-- **Claudeに代行させなかった部分**: `terraform apply` / `terraform destroy` などクラウド上の実リソースを変更する操作、Google Cloud コンソールでの実際のログイン・課金情報の入力・発行されたAPIキーやOAuthシークレットの授受——これらは意図的に人間側の操作として残している（[設計判断とトレードオフ](#設計判断とトレードオフ) や `DEPLOYS_GUIDE.md` の移行手順も参照）
+- **Claudeに代行させなかった部分**: `terraform apply` / `terraform destroy` などクラウド上の実リソースを変更する操作、Google Cloud コンソールでの実際のログイン・課金情報の入力・発行されたAPIキーやOAuthシークレットの授受——これらは意図的に人間側の操作として残している（[設計判断とトレードオフ](#設計判断とトレードオフ) を参照）
 
 ### 生成されたコードの検証方法
 
@@ -359,8 +359,6 @@ GitHub Actions には以下のワークフローがあります。
 Terraform 設定は `terraform/` にあります。
 Cloud Run、Artifact Registry、Secret Manager、Workload Identity などを構築します。
 認証付き構成では Cloud SQL for PostgreSQL も作成します。
-
-詳しい手順は [DEPLOYS_GUIDE.md](./DEPLOYS_GUIDE.md) を参照してください。
 
 最小の流れは以下です。
 
