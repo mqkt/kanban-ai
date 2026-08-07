@@ -18,24 +18,24 @@ Sources: [Apple Newsroom — Liquid Glass](https://www.apple.com/newsroom/2025/0
 
 `backdrop-filter: blur()` blurs whatever is *behind* the element. A flat
 single-color page background gives it nothing to blur — the glass effect
-disappears. `app-bg` gets a fixed, soft multi-color gradient wash so every
-glass surface on top of it has something to refract.
+disappears. `app-bg` gets a fixed, soft gradient wash so every glass
+surface on top of it has something to refract.
+
+An earlier version of this used three colored blobs (blue, violet, pink) —
+the same radial-gradient trio that's become a visual cliché on AI-product
+marketing pages. Swapped it for a single low-opacity wash of the app's own
+brand blue (`blue-600`), reading as one soft light source from a corner
+rather than a "generated" hero background.
 
 ```css
 @utility app-bg {
   @apply bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 transition-colors duration-300;
-  background-image:
-    radial-gradient(at 15% 10%, rgba(147, 197, 253, 0.35) 0px, transparent 50%),
-    radial-gradient(at 85% 15%, rgba(196, 181, 253, 0.30) 0px, transparent 50%),
-    radial-gradient(at 50% 90%, rgba(251, 207, 232, 0.25) 0px, transparent 50%);
+  background-image: radial-gradient(at 15% 0%, rgba(37, 99, 235, 0.07) 0px, transparent 60%);
   background-attachment: fixed;
 }
 
 html.dark .app-bg {
-  background-image:
-    radial-gradient(at 15% 10%, rgba(30, 58, 138, 0.45) 0px, transparent 50%),
-    radial-gradient(at 85% 15%, rgba(76, 29, 149, 0.40) 0px, transparent 50%),
-    radial-gradient(at 50% 90%, rgba(157, 23, 77, 0.25) 0px, transparent 50%);
+  background-image: radial-gradient(at 15% 0%, rgba(37, 99, 235, 0.16) 0px, transparent 60%);
 }
 ```
 
