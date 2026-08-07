@@ -9,12 +9,11 @@ export const taskTitleSchema = z
 
 export const taskStatusSchema = z.nativeEnum(TaskStatus);
 
-export const taskCategorySchema = z
-  .string()
-  .trim()
-  .min(1, "カテゴリを入力してください")
-  .max(50, "カテゴリは50文字以内で入力してください")
-  .nullable();
+// AI自動分類・手動編集の両方で使う固定の選択肢。自由入力にすると「仕事」「Work」のような
+// 表記ゆれで同じ意味のカテゴリが増殖し、絞り込み・色分けが機能しなくなるため閉じた集合にしている。
+export const TASK_CATEGORIES = ["仕事", "勉強", "家事", "趣味", "その他"] as const;
+
+export const taskCategorySchema = z.enum(TASK_CATEGORIES).nullable();
 
 export const TASK_PRIORITIES = ["高", "中", "低"] as const;
 

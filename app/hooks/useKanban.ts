@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Task, TaskStatus } from "../types/kanban";
 
 type TaskPatch = Partial<
-  Pick<Task, "title" | "status" | "category" | "priority">
->;
+  Pick<Task, "title" | "status" | "priority">
+> & { category?: string | null };
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -85,8 +85,16 @@ export function useKanban() {
   }, [isDarkMode, isMounted]);
 
   const patchTask = async (id: string, patch: TaskPatch) => {
+    // categoryはワイヤー上（PATCHボディ）は「クリア」を表すnullを送るが、
+    // クライアント側のTask型はサーバーのレスポンス同様undefinedを「未分類」として扱うため、
+    // 楽観的更新の反映時だけnull→undefinedに変換する。
+    const { category, ...rest } = patch;
+    const optimisticPatch: Partial<Task> = { ...rest };
+    if ("category" in patch) {
+      optimisticPatch.category = category ?? undefined;
+    }
     setTasks((prev) =>
-      prev.map((task) => (task.id === id ? { ...task, ...patch } : task))
+      prev.map((task) => (task.id === id ? { ...task, ...optimisticPatch } : task))
     );
 
     try {
@@ -173,6 +181,10 @@ export function useKanban() {
 
   const updateTaskStatus = (id: string, newStatus: TaskStatus) => {
     void patchTask(id, { status: newStatus });
+  };
+
+  const updateTaskCategory = (id: string, category: string | null) => {
+    void patchTask(id, { category });
   };
 
   const editTaskTitle = (id: string, newTitle: string) => {
@@ -286,6 +298,7 @@ export function useKanban() {
     addTask,
     deleteTask,
     updateTaskStatus,
+    updateTaskCategory,
     editTaskTitle,
     mergeTasks,
     clearCompletedTasks,

@@ -7,6 +7,7 @@ import {
   classifyRequestSchema,
   classifyResponseSchema,
 } from "@/lib/validation/classify";
+import { TASK_CATEGORIES } from "@/lib/validation/task";
 import { logger } from "@/lib/logger";
 import {
   getCachedClassification,
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
         properties: {
           category: {
             type: SchemaType.STRING,
-            enum: ["仕事", "勉強", "家事", "趣味", "その他"],
+            enum: [...TASK_CATEGORIES],
             description: "タスクの自動カテゴリ。仕事、勉強、家事、趣味、その他のいずれか。"
           },
           priority: {
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
         }
       });
 
-      const prompt = `タスクのタイトルを「仕事、勉強、家事、趣味、その他」のいずれかに分類し、優先度（高・中・低のいずれか）を推定してください。
+      const prompt = `タスクのタイトルを「${TASK_CATEGORIES.join("、")}」のいずれかに分類し、優先度（高・中・低のいずれか）を推定してください。
 
 タスク: "${title}"`;
 
