@@ -360,6 +360,8 @@ Terraform 設定は `terraform/` にあります。
 Cloud Run、Artifact Registry、Secret Manager、Workload Identity などを構築します。
 認証付き構成では Cloud SQL for PostgreSQL も作成します。
 
+tfstateはリモートバックエンド（GCS、バージョニング有効）で管理しています。ローカルstateのみだとPCの紛失やstate破損で復旧不能になるリスクがあるため、`provider.tf` の `backend "gcs"` ブロックでバケットを指定し、`terraform init -migrate-state` で移行済みです。
+
 最小の流れは以下です。
 
 ```bash
@@ -392,3 +394,5 @@ database_deletion_protection = true
 ```bash
 npx prisma migrate deploy
 ```
+
+**既知の未設定項目**: 現在のデプロイ先では `auth_resend_key` がプレースホルダーのままで、メールリンク認証（Resendによるマジックリンク送信）は未設定です。Google OAuthログインは動作しますが、メールでのログインを有効にするには実際のResend APIキーの取得・設定が必要です。

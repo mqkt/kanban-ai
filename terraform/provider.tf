@@ -17,6 +17,14 @@ terraform {
 
   # 動作に必要な最低限のTerraform本体のバージョンを指定します
   required_version = ">= 1.5.0"
+
+  # tfstateをローカルではなくGCSバケットで管理する（リモートバックエンド）。
+  # ローカルstateだけだと、PCの紛失・複数人での作業・CI/CDからのapplyで
+  # state不整合や損失のリスクがあるため、バージョニング有効なバケットに保存する。
+  backend "gcs" {
+    bucket = "my-app-portfolio-504711-tfstate"
+    prefix = "terraform/state"
+  }
 }
 
 # Google Cloudプロバイダーの基本設定
