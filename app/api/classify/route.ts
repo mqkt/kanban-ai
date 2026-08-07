@@ -14,6 +14,8 @@ import {
   normalizeClassifyKey,
   setCachedClassification,
 } from "@/lib/classifyCache";
+import { reserveGeminiCall } from "@/lib/geminiBudget";
+import { CLASSIFY_MODEL } from "@/lib/constants";
 
 export const runtime = "nodejs";
 
@@ -65,6 +67,15 @@ export async function POST(request: Request) {
         }
       }
 
+      // ユーザー単位の制限とは別に、Gemini無料枠というアプリ全体で共有された
+      // 1日あたりの資源自体も保護する（詳細はlib/geminiBudget.ts参照）。
+      if (!reserveGeminiCall(CLASSIFY_MODEL)) {
+        return NextResponse.json(
+          { error: "本日のAI自動分類の利用上限に達しました。しばらくしてから再度お試しください。" },
+          { status: 429 }
+        );
+      }
+
       const genAI = new GoogleGenerativeAI(apiKey);
 
       // レスポンスの厳格なJSONスキーマ定義
@@ -86,7 +97,7 @@ export async function POST(request: Request) {
       };
 
       const model = genAI.getGenerativeModel({
-        model: "gemini-3.5-flash-lite",
+        model: CLASSIFY_MODEL,
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: responseSchema,
