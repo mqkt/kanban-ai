@@ -37,9 +37,9 @@ AI によるタスク分類・優先度推定を備えた、Next.js 製のかん
 ### 生成されたコードの検証方法
 
 - **型・静的解析**: `npx tsc --noEmit` と `npm run lint`（ESLint）を各変更後に実行
-- **自動テスト**: ユニットテストと結合テストを分離している。`npm run test`（Vitest、`vi.mock`でPrismaを全面モック）はバリデーションスキーマ・APIルートが「どんな形のクエリを発行しようとしたか」・フォームコンポーネントを高速に検証する一方、モックである以上「実際にPostgres上で正しい行が読み書きされるか」は検証できない。そこで `npm run test:integration`（`vitest.integration.config.mts`、Prismaは実クライアントのまま・`@/auth`のみモック）を別に用意し、他ユーザーのタスクへの越境アクセス防止・`$transaction`の再取得結果・keysetページネーション（cursor行が削除された後も正しく次ページを返すか）を実DBに対して検証している。専用の使い捨てDB（`docker-compose.yml`の`test-db`、tmpfsで非永続化）を使い、`vitest.integration.setup.ts`で開発用DBを誤って対象にしないようDB名に`test`を含むことを強制するガードを入れている。GitHub Actions CI（`ci.yml`）では `lint-and-build`（lint → unit test → build）と並行して、Postgresサービスコンテナ上で `integration-test` ジョブを実行
+- **自動テスト**: ユニットテストと結合テストを分離している。`npm run test`（Vitest、`vi.mock`でPrismaを全面モック）はバリデーションスキーマ・APIルートが「どんな形のクエリを発行しようとしたか」・フォームコンポーネントを高速に検証する一方、モックである以上「実際にPostgres上で正しい行が読み書きされるか」は検証できない。そこで `npm run test:integration`（`vitest.integration.config.mts`、Prismaは実クライアントのまま・`@/auth`と`@google/generative-ai`のみモック。後者はコスト・非決定性のため実呼び出しはしない）を別に用意し、`/api/tasks`（他ユーザーのタスクへの越境アクセス防止・`$transaction`の再取得結果・keysetページネーション）、`/api/classify`（ゲストAI利用上限のupdateManyが並行10リクエストでも`GUEST_AI_LIMIT`を超えないこと）、`/api/triage`（DONE・他ユーザーのタスクを除外した上での候補ID解決）を実DBに対して検証している。特にゲスト利用上限の並行アクセステストは、Prismaをモックする限り原理的に検証できない（モックは「モックにそう答えさせただけ」で、DB側の条件付きUPDATEが実際に競合を防げているかは分からないため）。専用の使い捨てDB（`docker-compose.yml`の`test-db`、tmpfsで非永続化）を使い、`vitest.integration.setup.ts`で開発用DBを誤って対象にしないようDB名に`test`を含むことを強制するガードを入れている。GitHub Actions CI（`ci.yml`）では `lint-and-build`（lint → unit test → build）と並行して、Postgresサービスコンテナ上で `integration-test` ジョブを実行
 - **ビルド**: `npm run build`（Next.js本番ビルド + `prisma generate`）が通ることを都度確認
-- **実機確認**: Claude Codeのブラウザ操作機能で実際にdevサーバーを起動し、ゲストログイン → タスク追加（バリデーションエラー表示 → 正常系 → AI自動分類）→ ネットワークログ・コンソールエラーの確認、まで一通り操作して検証。API応答やレスポンスヘッダー（`Cache-Control` など）もネットワークログで確認
+- **実機確認**: Claude Codeのブラウザ操作機能で実際にdevサーバーを起動し、ゲストログイン → タスク追加（バリデーションエラー表示 → 正常系 → AI自動分類）→ ネットワークログ・コンソールエラーの確認、まで一通り操作して検証。API応答やレスポンスヘッダー（`Cache-Control` など）もネットワークログで確認。Sentryは「コード上正しく見える」で終わらせず、実際にプロジェクトを発行してDSNを設定し、`node .next/standalone/server.js`（Dockerfileと同じ起動経路）でクライアント側の未捕捉エラーを発生させ、Sentry Issues画面に届くところまで確認した
 - **インフラ**: Terraformの変更は `terraform validate` / `terraform plan` で構文・整合性を確認。実際のクラウドリソースを変更する `apply` / `destroy` は行っていない（上記の通り人間側の操作）
 
 ## 設計判断とトレードオフ
@@ -62,7 +62,7 @@ NextAuthはセッションCookieに `SameSite=Lax` を使用し、`/api/auth/*` 
 
 `proxy.ts`（Next.js 16でmiddlewareから改称されたリクエストフック。同じファイルで認証チェック・レートリミットも行っているため統合）でリクエストごとにnonceを発行し、`script-src`に `'unsafe-inline'` を使わずnonceベースのCSPを配布している。ダークモードのちらつき防止用インラインscript（`app/layout.tsx`）はこのnonceを検証に通した上でのみ実行を許可される。`script-src`には`'strict-dynamic'`も付与し、nonceを持つスクリプトが動的に読み込むスクリプトのみ許可（ホスト名ベースの許可リストは無視される、nonce対応ブラウザ向けのモダンな構成）。外部スクリプト・外部フォントを読み込んでいない構成（`next/font`はビルド時にセルフホスト、Google認証はサーバー側リダイレクト）のため、`connect-src`等を緩める必要がなく `default-src 'self'` を素直に適用できている。
 
-`connect-src`は`'self'`に加え`https://*.sentry.io`を許可している。`instrumentation-client.ts`でクライアント側Sentry（`NEXT_PUBLIC_SENTRY_DSN`設定時のみ有効）がエラーレポートをSentryのingestエンドポイントへ送るため、これを許可しないと本番でDSNを設定した瞬間にCSPがエラーレポート送信をブロックし、気づかれないまま可観測性が失われる。
+`connect-src`は`'self'`に加え`https://*.sentry.io`を許可している。`instrumentation-client.ts`でクライアント側Sentry（`NEXT_PUBLIC_SENTRY_DSN`設定時のみ有効）がエラーレポートをSentryのingestエンドポイントへ送るため、これを許可しないと本番でDSNを設定した瞬間にCSPがエラーレポート送信をブロックし、気づかれないまま可観測性が失われる。実際にSentryプロジェクトを発行してDSNを設定し、`node .next/standalone/server.js`（Dockerfileと同じ起動方法）でクライアント側の未捕捉エラーを発生させ、SentryのIssues画面に届くところまで確認済み（コード上の推測ではなく実地で検証した）。
 
 `style-src`は`'self' 'unsafe-inline'`のまま緩めている。XSSの実害はほぼ`script-src`（任意コード実行）側で決まり、CSS注入の被害は限定的（見た目の改ざんや一部の情報詮索に留まる）なので費用対効果が低いことに加え、`next dev`（Turbopack）のHMRがCSSチャンクをnonceなしのインライン`<style>`で差し込むため、`style-src`を厳格化すると開発時に無害な違反ログが大量に出て本来見るべきエラーを埋もれさせてしまう。本番ビルド（`next start`）ではCSP・機能とも正常動作をブラウザで確認済み（コンソールエラーなし、AI自動分類を含むタスク追加フローも問題なし）。
 
