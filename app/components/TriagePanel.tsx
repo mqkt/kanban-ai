@@ -48,7 +48,7 @@ export default function TriagePanel({
     tasks.find((task) => task.id === taskId)?.title ?? "（削除済み）";
 
   return (
-    <section className="panel-card p-4 flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Copy className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -131,6 +131,6 @@ export default function TriagePanel({
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
