@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ToDoリスト",
-  description: "人生を整理しよう",
+  title: "Kanban Dashboard",
+  description: "タスクのカテゴリ・優先度をAIが自動判定し、重複タスクの検出もできます。",
 };
 
 export default async function RootLayout({

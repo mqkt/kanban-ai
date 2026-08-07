@@ -72,7 +72,7 @@ export default function BoardHeader({
             Kanban Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-            ドラッグ＆ドロップやボタンでスマートにタスクを管理
+            タスクのカテゴリ・優先度をAIが自動判定し、重複タスクの検出もできます。
           </p>
         </div>
       </div>
