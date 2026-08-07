@@ -51,3 +51,4 @@ next-env.d.ts
 *.tfvars
 *.tfvars.json
 terraform.tfvars
+terraform/.old-project-project-c812eeb4/
