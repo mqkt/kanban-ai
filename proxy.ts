@@ -67,9 +67,15 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // getToken() はデフォルトで req.url の先頭 "https://" を見て、Secure Cookie
+  // （__Secure- プレフィックス付き）を探すかどうかを自動判定する。Cloud Run は
+  // GFE で TLS終端した後コンテナへは平文で転送するため、リクエストによっては
+  // この自動判定がずれて401を誤って返すことがある。nextUrl（Forwardedヘッダー
+  // 込みで構築される）のプロトコルを明示的に渡して確実に一致させる。
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
+    secureCookie: request.nextUrl.protocol === "https:",
   });
 
   if (token) {
