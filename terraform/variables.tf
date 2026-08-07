@@ -81,17 +81,6 @@ variable "auth_google_secret" {
   sensitive   = true
 }
 
-variable "auth_resend_key" {
-  type        = string
-  description = "Resend APIキーです。"
-  sensitive   = true
-}
-
-variable "auth_email_from" {
-  type        = string
-  description = "メールリンク認証の送信元メールアドレスです。"
-}
-
 variable "cron_secret" {
   type        = string
   description = "期限切れゲスト自動削除API（/api/admin/cleanup-guests）を保護するシークレットです。Cloud Scheduler からの呼び出しをこの値のBearerトークンで認証します。"

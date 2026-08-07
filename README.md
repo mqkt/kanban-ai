@@ -11,7 +11,7 @@ AI によるタスク分類・優先度推定を備えた、Next.js 製のかん
 - カード内ボタンによるクイック移動
 - 完了タスクの一括削除
 - ライト / ダークテーマ切り替え
-- Auth.js による Google OAuth / メールリンク認証
+- Auth.js による Google OAuth 認証
 - PostgreSQL によるユーザー別タスク保存
 - Gemini API を使ったタスクカテゴリ・優先度の自動推定
 - 3日以上ステータスが変わっていないタスクの停滞検知
@@ -104,6 +104,10 @@ NextAuthはセッションCookieに `SameSite=Lax` を使用し、`/api/auth/*` 
 
 「進行中レーンは同時に5件まで」というWIP制限を、クライアント・サーバー両方で強制するところまで一度実装しましたが、サービスとして出す前提で見直し、削除しました。理由は、適正な同時進行数は人によって大きく異なり、固定値をすべてのユーザーに強制するのは押し付けがましく、しかも当時の実装は「例外なくハードブロック」だったため、急ぎで1件だけ追加したい場面でも回避策がなかったためです。個人設定にする・警告のみに緩める、といった改善案もありましたが、今のスコープでは「機能を削って判断の理由を残す」方を選びました。作って終わりにせず、実際のユーザー視点で要不要を再検討したという経緯自体を記録として残しています。
 
+### メールリンク認証（Resend）を実装後に削除した判断
+
+Auth.jsのResendプロバイダーでメールリンク（マジックリンク）ログインを一度実装しましたが、最終的に丸ごと削除しました。理由は、実際に運用するにはResend側でドメイン認証が必要で、それをしない限り自分の検証済みメールアドレスにしか送信できず、ログイン画面にボタンとフォームだけが存在して押しても機能しない状態になっていたためです。Sentry（未設定のまま任意機能として残す判断）と違い、こちらはUIに露出していて訪問者が実際に踏める導線だったので、「動かないものを見せる」より「削除して、Google OAuth・ゲストログインの2経路に絞る」方を選びました。認証プロバイダーを複数構成できる設計自体は元のコード・コミット履歴で示せるため、削除しても実装力の証明としては失っていないと判断しています。
+
 ### 重複タスクの検出（トリアージ）
 
 「溜まったタスクの中からAIに重複・統合できそうなものを判断させる」機能です。設計上、意図的にオンデマンド実行のみにし、Cloud Schedulerのような定期実行での自動マージは行っていません。誤検出でタスクが勝手にマージ・削除されるとデータ損失になるため、AIの提案はあくまで「候補の提示」までとし、実行（統合／無視）は必ずユーザーが1件ずつ判断します。
@@ -146,7 +150,6 @@ Cloud Run・Cloud SQLを動かすには請求先アカウントのリンクが�
 - Auth.js
 - Prisma
 - PostgreSQL / Cloud SQL
-- Resend
 - Google Gemini API (`@google/generative-ai`)
 - Zod（入力バリデーション）
 - React Hook Form（フォーム状態管理）
@@ -179,8 +182,6 @@ DATABASE_URL="postgresql://kanban_app:password@localhost:5432/kanban?schema=publ
 AUTH_SECRET="generate-with-openssl-rand-base64-32"
 AUTH_GOOGLE_ID="your-google-oauth-client-id"
 AUTH_GOOGLE_SECRET="your-google-oauth-client-secret"
-AUTH_RESEND_KEY="your-resend-api-key"
-AUTH_EMAIL_FROM="Kanban Dashboard <login@example.com>"
 GEMINI_API_KEY=your-gemini-api-key
 # 期限切れゲストの自動削除API（/api/admin/cleanup-guests）を保護するシークレット
 CRON_SECRET="generate-with-openssl-rand-base64-32"
@@ -375,8 +376,6 @@ database_password = "your-db-password"
 auth_secret       = "openssl-rand-base64-32"
 auth_google_id    = "your-google-oauth-client-id"
 auth_google_secret = "your-google-oauth-client-secret"
-auth_resend_key   = "your-resend-api-key"
-auth_email_from   = "Kanban Dashboard <login@example.com>"
 cron_secret       = "openssl-rand-base64-32"
 
 # 本番運用ではtrue推奨（デフォルトtrueのため省略可）
@@ -389,4 +388,3 @@ database_deletion_protection = true
 npx prisma migrate deploy
 ```
 
-**既知の未設定項目**: 現在のデプロイ先では `auth_resend_key` がプレースホルダーのままで、メールリンク認証（Resendによるマジックリンク送信）は未設定です。Google OAuthログインは動作しますが、メールでのログインを有効にするには実際のResend APIキーの取得・設定が必要です。

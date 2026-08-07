@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
@@ -28,10 +27,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   providers: [
     Google,
-    Resend({
-      apiKey: process.env.AUTH_RESEND_KEY,
-      from: process.env.AUTH_EMAIL_FROM,
-    }),
     Credentials({
       id: "guest",
       name: "ゲスト",
