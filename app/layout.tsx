@@ -29,8 +29,11 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* ページ描画前にダークモードを適用してフラッシュを防ぐ */}
+        {/* ブラウザはXSS対策でnonce属性をDOM上から読めなくする（getAttributeが空文字を返す）ため、
+            SSRの実値とハイドレーション時の見た目上の値が食い違い、Reactが誤検知の警告を出す。実害はない。 */}
         <script
           nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
           }}
