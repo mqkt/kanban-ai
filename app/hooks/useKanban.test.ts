@@ -88,4 +88,49 @@ describe("useKanban", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("sends category:null (not omitted) when clearing a task's category", async () => {
+    const todoTask = makeTask("todo-1", "TODO");
+
+    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ task: { ...todoTask, category: undefined } }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ tasks: [{ ...todoTask, category: "仕事" }], nextCursor: null }),
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useKanban());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.updateTaskCategory("todo-1", null);
+    });
+
+    // 楽観的更新: サーバー応答を待たずにローカル表示から即座にカテゴリが消える
+    await waitFor(() =>
+      expect(result.current.tasks.find((t) => t.id === "todo-1")?.category).toBeUndefined()
+    );
+
+    await waitFor(() => {
+      const patchCall = fetchMock.mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH"
+      );
+      expect(patchCall).toBeDefined();
+      // "category" キー自体が省略されるとサーバー側で「変更なし」と解釈されてしまうため、
+      // 明示的に null を送ってクリアの意図を伝える必要がある。
+      expect(JSON.parse((patchCall![1] as RequestInit).body as string)).toEqual({
+        id: "todo-1",
+        category: null,
+      });
+    });
+
+    vi.unstubAllGlobals();
+  });
 });
