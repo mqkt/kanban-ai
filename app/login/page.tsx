@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
-import { ArrowLeft, Mail, Chrome, UserRound } from "lucide-react";
+import { ArrowLeft, Chrome, UserRound } from "lucide-react";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const callbackUrl = safeCallbackUrl(params?.callbackUrl);
 
   // ゲストセッションはこの画面を素通りさせない。自動開始したゲストが
-  // Google/メールで正式アカウントに切り替えられるようにするため。
+  // Googleで正式アカウントに切り替えられるようにするため。
   // すでに正式ログイン済みの場合だけ、フォームを見せずリダイレクトする。
   if (session && !session.user.isGuest) {
     redirect(callbackUrl);
@@ -43,7 +43,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             ログイン
           </h1>
           <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
-            Googleアカウント、またはメールリンクでKanban Dashboardを開きます。
+            Googleアカウントでログイン、またはゲストとしてすぐに試せます。
           </p>
         </div>
 
@@ -56,41 +56,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <button type="submit" className="btn-action-primary w-full">
             <Chrome className="h-5 w-5" />
             Googleで続ける
-          </button>
-        </form>
-
-        <div className="my-5 flex items-center gap-3 text-xs font-bold text-slate-400">
-          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-          または
-          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-        </div>
-
-        <form
-          className="flex flex-col gap-3"
-          action={async (formData) => {
-            "use server";
-            const email = String(formData.get("email") || "");
-            await signIn("resend", { email, redirectTo: callbackUrl });
-          }}
-        >
-          <label className="text-xs font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            メールアドレス
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-            <input
-              name="email"
-              type="email"
-              required
-              placeholder="you@example.com"
-              className="input-clean pl-11"
-            />
-          </div>
-          <button
-            type="submit"
-            className="btn-action-secondary flex items-center justify-center gap-2 py-3"
-          >
-            メールリンクを送る
           </button>
         </form>
 

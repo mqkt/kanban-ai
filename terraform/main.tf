@@ -137,16 +137,6 @@ locals {
       secret_id  = "${var.app_name}-auth-google-secret"
       secret_val = var.auth_google_secret
     }
-    auth_resend_key = {
-      env_name   = "AUTH_RESEND_KEY"
-      secret_id  = "${var.app_name}-auth-resend-key"
-      secret_val = var.auth_resend_key
-    }
-    auth_email_from = {
-      env_name   = "AUTH_EMAIL_FROM"
-      secret_id  = "${var.app_name}-auth-email-from"
-      secret_val = var.auth_email_from
-    }
     cron_secret = {
       env_name   = "CRON_SECRET"
       secret_id  = "${var.app_name}-cron-secret"
