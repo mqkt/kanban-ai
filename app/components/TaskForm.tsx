@@ -64,46 +64,44 @@ export default function TaskForm({ onSubmit, isLoading = false }: TaskFormProps)
   };
 
   return (
-    <section className="panel-card p-4">
-      <form onSubmit={handleSubmit(onValid)} className="flex flex-col gap-3" noValidate>
-        {/* メイン行：タイトル入力と追加ボタン */}
-        <div className="flex flex-col md:flex-row gap-3">
-          {/* 入力テキストボックスコンテナ */}
-          <div className="relative flex-1">
-            <input
-              type="text"
-              {...register("title")}
-              placeholder="新しいタスクを入力..."
-              className="input-clean pl-11"
-              aria-invalid={errors.title ? "true" : "false"}
-            />
-            {/* テキストボックス内の左側アイコン */}
-            <Plus className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-          </div>
-
-          {/* タスクを追加するボタン */}
-          <button
-            type="submit"
-            disabled={isLoading || isSubmitting}
-            className="btn-action-primary min-w-[140px]"
-          >
-            <Plus className="w-5 h-5" strokeWidth={2.5} />
-            <span>タスクを追加</span>
-          </button>
+    <form onSubmit={handleSubmit(onValid)} className="flex flex-col gap-3" noValidate>
+      {/* メイン行：タイトル入力と追加ボタン */}
+      <div className="flex flex-col md:flex-row gap-3">
+        {/* 入力テキストボックスコンテナ */}
+        <div className="relative flex-1">
+          <input
+            type="text"
+            {...register("title")}
+            placeholder="新しいタスクを入力..."
+            className="input-clean pl-11"
+            aria-invalid={errors.title ? "true" : "false"}
+          />
+          {/* テキストボックス内の左側アイコン */}
+          <Plus className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
         </div>
 
-        {errors.title && (
-          <p className="px-1 text-xs font-semibold text-red-500 dark:text-red-400">
-            {errors.title.message}
-          </p>
-        )}
+        {/* タスクを追加するボタン */}
+        <button
+          type="submit"
+          disabled={isLoading || isSubmitting}
+          className="btn-action-primary min-w-[140px]"
+        >
+          <Plus className="w-5 h-5" strokeWidth={2.5} />
+          <span>タスクを追加</span>
+        </button>
+      </div>
 
-        {/* AI自動分類の予告アシストメッセージ */}
-        <div className="flex items-center gap-1.5 px-1 py-0.5 text-xs text-blue-500/85 dark:text-blue-400/85 select-none">
-          <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-pulse" />
-          <span>タスク追加後に、AIがカテゴリと優先度を自動的に推定します</span>
-        </div>
-      </form>
-    </section>
+      {errors.title && (
+        <p className="px-1 text-xs font-semibold text-red-500 dark:text-red-400">
+          {errors.title.message}
+        </p>
+      )}
+
+      {/* AI自動分類の予告アシストメッセージ */}
+      <div className="flex items-center gap-1.5 px-1 py-0.5 text-xs text-blue-500/85 dark:text-blue-400/85 select-none">
+        <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-pulse" />
+        <span>タスク追加後に、AIがカテゴリと優先度を自動的に推定します</span>
+      </div>
+    </form>
   );
 }

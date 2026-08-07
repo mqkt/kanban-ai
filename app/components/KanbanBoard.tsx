@@ -102,23 +102,30 @@ export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
           </div>
         )}
 
-        <TaskForm onSubmit={addTask} isLoading={isLoading} />
+        {/* タスク追加とAI重複チェックは、どちらも「ボードを操作する前段のツール」として
+            1枚のカードにまとめている。別々のカードに分けるとボード本体（本来の主役）に
+            たどり着くまでのスクロール量が増えるため、SaaS的なツールバーに近い密度に寄せた。 */}
+        <section className="panel-card p-4 flex flex-col gap-4">
+          <TaskForm onSubmit={addTask} isLoading={isLoading} />
 
-        {!isLoading && (
-          <TriagePanel
-            tasks={tasks}
-            suggestions={triage.suggestions}
-            isRunning={triage.isRunning}
-            error={triage.error}
-            hasRun={triage.hasRun}
-            onRun={triage.runTriage}
-            onDismiss={triage.dismissSuggestion}
-            onMerge={handleMergeSuggestion}
-          />
-        )}
+          {!isLoading && (
+            <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4">
+              <TriagePanel
+                tasks={tasks}
+                suggestions={triage.suggestions}
+                isRunning={triage.isRunning}
+                error={triage.error}
+                hasRun={triage.hasRun}
+                onRun={triage.runTriage}
+                onDismiss={triage.dismissSuggestion}
+                onMerge={handleMergeSuggestion}
+              />
+            </div>
+          )}
+        </section>
 
         {!isLoading && availableCategories.length > 0 && (
-          <div className="panel-card px-4 py-3 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 px-1">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
               <Filter className="w-3.5 h-3.5" />
               カテゴリで絞り込み
