@@ -69,12 +69,12 @@ describe("proxy (middleware)", () => {
 
   it("uses the rightmost X-Forwarded-For value (the one GFE appends) as the rate-limit key", async () => {
     await proxy(
-      makeRequest("https://example.com/api/triage", {
+      makeRequest("https://example.com/api/duplicates", {
         "x-forwarded-for": "attacker-spoofed-ip, real-gfe-ip",
       })
     );
     expect(isRateLimitedMock).toHaveBeenCalledWith(
-      "real-gfe-ip:/api/triage"
+      "real-gfe-ip:/api/duplicates"
     );
   });
 

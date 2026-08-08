@@ -194,7 +194,7 @@ export function useKanban() {
     void patchTask(id, { title: trimmed });
   };
 
-  // トリアージ機能（重複タスクの検出）が提案したグループを実際に統合する。
+  // 重複タスクの検出機能が提案したグループを実際に統合する。
   // 新しいAPIは作らず、既存の PATCH（タイトル変更）と DELETE（残りを削除）を組み合わせるだけに
   // している。誤マージ時の影響範囲を小さくするため、常に「1件を残して残りを消す」形に統一。
   const mergeTasks = async (keepId: string, mergeIds: string[], newTitle: string) => {

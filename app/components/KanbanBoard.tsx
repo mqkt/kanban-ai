@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useKanban } from "../hooks/useKanban";
-import { useTriage } from "../hooks/useTriage";
+import { useDuplicates } from "../hooks/useDuplicates";
 import { LaneConfig } from "../types/kanban";
 import { Clock, Layers, CheckCircle, Hourglass, Filter, X } from "lucide-react";
 import BoardHeader from "./BoardHeader";
 import TaskForm from "./TaskForm";
 import KanbanLane from "./KanbanLane";
-import TriagePanel from "./TriagePanel";
+import DuplicatePanel from "./DuplicatePanel";
 import AboutSection from "./AboutSection";
 
 interface KanbanBoardProps {
@@ -36,7 +36,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
     dragHandlers,
   } = useKanban();
 
-  const triage = useTriage();
+  const duplicates = useDuplicates();
 
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
@@ -51,10 +51,10 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
   );
 
   const handleMergeSuggestion = async (index: number) => {
-    const suggestion = triage.suggestions[index];
+    const suggestion = duplicates.suggestions[index];
     if (!suggestion) return;
     const [keepId, ...mergeIds] = suggestion.taskIds;
-    triage.dismissSuggestion(index);
+    duplicates.dismissSuggestion(index);
     await mergeTasks(keepId, mergeIds, suggestion.suggestedTitle);
   };
 
@@ -114,14 +114,14 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
 
           {!isLoading && (
             <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4">
-              <TriagePanel
+              <DuplicatePanel
                 tasks={tasks}
-                suggestions={triage.suggestions}
-                isRunning={triage.isRunning}
-                error={triage.error}
-                hasRun={triage.hasRun}
-                onRun={triage.runTriage}
-                onDismiss={triage.dismissSuggestion}
+                suggestions={duplicates.suggestions}
+                isRunning={duplicates.isRunning}
+                error={duplicates.error}
+                hasRun={duplicates.hasRun}
+                onRun={duplicates.runDuplicateCheck}
+                onDismiss={duplicates.dismissSuggestion}
                 onMerge={handleMergeSuggestion}
               />
             </div>

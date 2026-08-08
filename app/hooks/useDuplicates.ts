@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export interface TriageSuggestion {
+export interface DuplicateSuggestion {
   taskIds: string[];
   reason: string;
   suggestedTitle: string;
@@ -24,15 +24,15 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-// 重複タスク検出（トリアージ）はオンデマンド実行のみ。定期実行や自動マージは行わない
+// 重複タスク検出はオンデマンド実行のみ。定期実行や自動マージは行わない
 // （誤検出時のデータ損失を避けるため、常にユーザーが1件ずつ確認・実行する）。
-export function useTriage() {
-  const [suggestions, setSuggestions] = useState<TriageSuggestion[]>([]);
+export function useDuplicates() {
+  const [suggestions, setSuggestions] = useState<DuplicateSuggestion[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasRun, setHasRun] = useState(false);
 
-  const runTriage = async () => {
+  const runDuplicateCheck = async () => {
     if (suggestions.length > 0) {
       const proceed = window.confirm(
         `まだ確認していない提案が${suggestions.length}件あります。再チェックすると上書きされますが、続けますか？`
@@ -43,8 +43,8 @@ export function useTriage() {
     setIsRunning(true);
     setError(null);
     try {
-      const data = await requestJson<{ suggestions: TriageSuggestion[] }>(
-        "/api/triage",
+      const data = await requestJson<{ suggestions: DuplicateSuggestion[] }>(
+        "/api/duplicates",
         { method: "POST" }
       );
       setSuggestions(data.suggestions);
@@ -73,7 +73,7 @@ export function useTriage() {
     isRunning,
     error,
     hasRun,
-    runTriage,
+    runDuplicateCheck,
     dismissSuggestion,
     reset,
   };

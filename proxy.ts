@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { isRateLimited } from "@/lib/rateLimit";
 
-const protectedPrefixes = ["/api/tasks", "/api/classify", "/api/triage"];
+const protectedPrefixes = ["/api/tasks", "/api/classify", "/api/duplicates"];
 
 // nonceベースのCSPを配布する。'unsafe-inline'を使わずインラインscript/styleを許可するため、
 // リクエストごとに乱数のnonceを発行し、layout.tsx側のインラインscriptタグに埋め込んで照合する。

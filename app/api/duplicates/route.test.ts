@@ -43,7 +43,7 @@ beforeEach(() => {
   authMock.mockResolvedValue({ user: { id: "user-1", isGuest: false } });
 });
 
-describe("POST /api/triage", () => {
+describe("POST /api/duplicates", () => {
   it("returns 401 when unauthenticated", async () => {
     authMock.mockResolvedValue(null);
     const response = await POST();

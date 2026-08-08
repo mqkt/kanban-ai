@@ -29,10 +29,10 @@ let otherUserId: string;
 
 beforeAll(async () => {
   const user = await prisma.user.create({
-    data: { email: `triage-integration-${randomUUID()}@example.com` },
+    data: { email: `duplicates-integration-${randomUUID()}@example.com` },
   });
   const other = await prisma.user.create({
-    data: { email: `triage-integration-other-${randomUUID()}@example.com` },
+    data: { email: `duplicates-integration-other-${randomUUID()}@example.com` },
   });
   userId = user.id;
   otherUserId = other.id;
@@ -53,7 +53,7 @@ afterEach(async () => {
   await prisma.task.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
 });
 
-describe("POST /api/triage (real DB)", () => {
+describe("POST /api/duplicates (real DB)", () => {
   it("excludes DONE tasks and other users' tasks, and resolves suggestion numbers to real task ids", async () => {
     const dup1 = await prisma.task.create({ data: { userId, title: "牛乳を買う" } });
     const dup2 = await prisma.task.create({ data: { userId, title: "牛乳買ってくる" } });
@@ -107,7 +107,7 @@ describe("POST /api/triage (real DB)", () => {
   it("consumes a guest's AI usage count and blocks at the limit", async () => {
     const guest = await prisma.user.create({
       data: {
-        email: `triage-integration-guest-${randomUUID()}@demo.local`,
+        email: `duplicates-integration-guest-${randomUUID()}@demo.local`,
         guestExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         aiUsageCount: 20,
       },

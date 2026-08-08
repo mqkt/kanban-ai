@@ -4,7 +4,7 @@ import { z } from "zod";
 // タスクの実IDではなく、プロンプトに振った1始まりの番号で参照させている
 // （実IDを直接返させると、モデルが存在しないIDを捏造するリスクがあるため。
 // 番号なら範囲チェックだけで安全に実IDへマッピングできる）。
-export const triageResponseSchema = z.object({
+export const duplicateResponseSchema = z.object({
   groups: z.array(
     z.object({
       taskNumbers: z.array(z.number().int()).min(2, "グループには2件以上のタスクが必要です"),

@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { triageResponseSchema } from "./triage";
+import { duplicateResponseSchema } from "./duplicates";
 
-describe("triageResponseSchema", () => {
+describe("duplicateResponseSchema", () => {
   it("accepts an empty groups array", () => {
-    const result = triageResponseSchema.safeParse({ groups: [] });
+    const result = duplicateResponseSchema.safeParse({ groups: [] });
     expect(result.success).toBe(true);
   });
 
   it("accepts a well-formed group", () => {
-    const result = triageResponseSchema.safeParse({
+    const result = duplicateResponseSchema.safeParse({
       groups: [
         {
           taskNumbers: [1, 3],
@@ -21,14 +21,14 @@ describe("triageResponseSchema", () => {
   });
 
   it("rejects a group with fewer than 2 task numbers", () => {
-    const result = triageResponseSchema.safeParse({
+    const result = duplicateResponseSchema.safeParse({
       groups: [{ taskNumbers: [1], reason: "理由", suggestedTitle: "タイトル" }],
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects a missing groups field", () => {
-    const result = triageResponseSchema.safeParse({});
+    const result = duplicateResponseSchema.safeParse({});
     expect(result.success).toBe(false);
   });
 });
