@@ -2,8 +2,9 @@
 
 import { signIn } from "@/auth";
 
-// 未ログイン訪問者を自動的にゲストとして開始させるためのServer Action。
-// AutoGuestStart（クライアント側）がマウント時にこれを叩くフォームを自動送信する。
-export async function startGuestSession() {
-  await signIn("guest", { redirectTo: "/" });
+// ゲストセッションを開始するServer Action。AutoGuestStart（未ログイン訪問者を
+// 自動でゲストにする）と /login の「ゲストで試す」ボタンの両方から、
+// `.bind(null, redirectTo)` でリダイレクト先だけ変えて共有する。
+export async function startGuestSession(redirectTo: string) {
+  await signIn("guest", { redirectTo });
 }

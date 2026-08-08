@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signIn, signOut } from "@/auth";
+import { startGuestSession } from "../actions";
 import { ArrowLeft, UserRound } from "lucide-react";
 
 // lucide-reactは汎用アイコンセットでブランドロゴを含まないため、
@@ -91,12 +92,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
             </div>
 
-            <form
-              action={async () => {
-                "use server";
-                await signIn("guest", { redirectTo: callbackUrl });
-              }}
-            >
+            <form action={startGuestSession.bind(null, callbackUrl)}>
               <button
                 type="submit"
                 className="btn-action-secondary flex w-full items-center justify-center gap-2 py-3"
