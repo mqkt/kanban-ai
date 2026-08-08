@@ -51,6 +51,8 @@ interface BoardHeaderProps {
   hasCompletedTasks: boolean;
   clearCompletedTasks: () => void;
   isGuest: boolean;
+  userName: string | null;
+  userImage: string | null;
 }
 
 export default function BoardHeader({
@@ -59,6 +61,8 @@ export default function BoardHeader({
   hasCompletedTasks,
   clearCompletedTasks,
   isGuest,
+  userName,
+  userImage,
 }: BoardHeaderProps) {
   return (
     <header className="panel-card px-6 py-6 sm:py-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -79,6 +83,30 @@ export default function BoardHeader({
 
       {/* 右側のボタンアクションエリア */}
       <div className="flex items-center gap-3 self-end sm:self-center">
+        {/* 今どのアカウントでログイン中か常に見えるようにする。ゲストは名前を持たないため
+            固定ラベルにし、正式ユーザーはアバター（無ければ頭文字）+ 名前かメールを表示する。 */}
+        {isGuest ? (
+          <span className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">
+            ゲスト利用中
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            {userImage ? (
+              <img
+                src={userImage}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="w-6 h-6 rounded-full"
+              />
+            ) : (
+              <span className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                {(userName ?? "?").charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="max-w-[9rem] truncate">{userName ?? "アカウント"}</span>
+          </span>
+        )}
+
         {/* 完了タスクが存在する場合のみ、クリアボタンを表示する */}
         {hasCompletedTasks && (
           <button

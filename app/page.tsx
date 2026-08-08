@@ -13,5 +13,11 @@ export default async function HomePage() {
     return <AutoGuestStart />;
   }
 
-  return <KanbanBoard isGuest={Boolean(session.user.isGuest)} />;
+  return (
+    <KanbanBoard
+      isGuest={Boolean(session.user.isGuest)}
+      userName={session.user.name ?? session.user.email ?? null}
+      userImage={session.user.image ?? null}
+    />
+  );
 }
