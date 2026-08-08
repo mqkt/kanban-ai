@@ -81,32 +81,11 @@ export default function BoardHeader({
         </div>
       </div>
 
-      {/* 右側のボタンアクションエリア */}
+      {/* 右側のボタンアクションエリア。
+          種類の異なるアクションを左から「ボード操作」「表示設定」「アカウント」の
+          3グループに分け、アカウント関連（アイデンティティ表示 + ログイン/ログアウト）を
+          一般的なアプリの慣習に合わせて最右端にひとまとめにしている。 */}
       <div className="flex items-center gap-3 self-end sm:self-center">
-        {/* 今どのアカウントでログイン中か常に見えるようにする。ゲストは名前を持たないため
-            固定ラベルにし、正式ユーザーはアバター（無ければ頭文字）+ 名前かメールを表示する。 */}
-        {isGuest ? (
-          <span className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">
-            ゲスト利用中
-          </span>
-        ) : (
-          <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            {userImage ? (
-              <img
-                src={userImage}
-                alt=""
-                referrerPolicy="no-referrer"
-                className="w-6 h-6 rounded-full"
-              />
-            ) : (
-              <span className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
-                {(userName ?? "?").charAt(0).toUpperCase()}
-              </span>
-            )}
-            <span className="max-w-[9rem] truncate">{userName ?? "アカウント"}</span>
-          </span>
-        )}
-
         {/* 完了タスクが存在する場合のみ、クリアボタンを表示する */}
         {hasCompletedTasks && (
           <button
@@ -116,17 +95,6 @@ export default function BoardHeader({
             <Trash2 className="w-3.5 h-3.5" />
             完了タスクをクリア
           </button>
-        )}
-
-        {/* ゲストの間だけ、正式アカウントへの切り替え導線を表示する */}
-        {isGuest && (
-          <Link
-            href="/login"
-            className="btn-action-secondary flex items-center gap-1.5 px-3 text-xs font-semibold"
-          >
-            <LogIn className="w-4 h-4" />
-            ログイン
-          </Link>
         )}
 
         {/* ダークモード切り替えボタン */}
@@ -142,21 +110,58 @@ export default function BoardHeader({
           )}
         </button>
 
-        {/* ゲストには「ログアウトすべき永続アカウント」がそもそも存在しない。
-            signOutしてもセッションが消えるだけで、`/`への遷移時にAutoGuestStartが
-            即座に新しい使い捨てゲストを発行し直すため、実質「今のタスクを黙って
-            捨てて別アカウントに切り替わる」ボタンになってしまう。「ログイン」と
-            対称に、正式ユーザー（!isGuest）の時だけ表示する。 */}
-        {!isGuest && (
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="btn-action-secondary"
-            aria-label="ログアウト"
-            title="ログアウト"
-          >
-            <LogOut className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-          </button>
-        )}
+        <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
+          {/* 今どのアカウントでログイン中か常に見えるようにする。ゲストは名前を持たないため
+              固定ラベルにし、正式ユーザーはアバター（無ければ頭文字）+ 名前かメールを表示する。 */}
+          {isGuest ? (
+            <span className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">
+              ゲスト利用中
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+              {userImage ? (
+                <img
+                  src={userImage}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="w-6 h-6 rounded-full"
+                />
+              ) : (
+                <span className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                  {(userName ?? "?").charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className="max-w-[9rem] truncate">{userName ?? "アカウント"}</span>
+            </span>
+          )}
+
+          {/* ゲストの間だけ、正式アカウントへの切り替え導線を表示する */}
+          {isGuest && (
+            <Link
+              href="/login"
+              className="btn-action-secondary flex items-center gap-1.5 px-3 text-xs font-semibold"
+            >
+              <LogIn className="w-4 h-4" />
+              ログイン
+            </Link>
+          )}
+
+          {/* ゲストには「ログアウトすべき永続アカウント」がそもそも存在しない。
+              signOutしてもセッションが消えるだけで、`/`への遷移時にAutoGuestStartが
+              即座に新しい使い捨てゲストを発行し直すため、実質「今のタスクを黙って
+              捨てて別アカウントに切り替わる」ボタンになってしまう。「ログイン」と
+              対称に、正式ユーザー（!isGuest）の時だけ表示する。 */}
+          {!isGuest && (
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="btn-action-secondary"
+              aria-label="ログアウト"
+              title="ログアウト"
+            >
+              <LogOut className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );
