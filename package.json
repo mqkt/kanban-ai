@@ -10,6 +10,7 @@
     "lint": "eslint",
     "pretest": "prisma generate",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:integration": "DATABASE_URL=\"${TEST_DATABASE_URL:-postgresql://kanban_app:password@localhost:5433/kanban_test?schema=public}\" npx prisma migrate deploy && npx prisma generate && vitest run -c vitest.integration.config.mts"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.5",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jsdom": "^29.1.1",
