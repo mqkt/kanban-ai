@@ -15,7 +15,6 @@ model User {
   guestExpiresAt DateTime?
   aiUsageCount   Int       @default(0)
   accounts       Account[]
-  sessions       Session[]
   tasks          Task[]
 
   @@index([guestExpiresAt])
@@ -37,21 +36,6 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
-}
-
-model Session {
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-
-  @@id([identifier, token])
 }
 
 model Task {
