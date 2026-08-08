@@ -15,10 +15,6 @@ export const TASK_CATEGORIES = ["仕事", "勉強", "家事", "趣味", "その�
 
 export const taskCategorySchema = z.enum(TASK_CATEGORIES).nullable();
 
-export const TASK_PRIORITIES = ["高", "中", "低"] as const;
-
-export const taskPrioritySchema = z.enum(TASK_PRIORITIES).nullable();
-
 // クライアント側フォーム（タイトルのみ入力）と、React Hook Form の zodResolver で共有する。
 export const taskFormSchema = z.object({
   title: taskTitleSchema,
@@ -30,7 +26,6 @@ export const createTaskSchema = z.object({
   title: taskTitleSchema,
   status: taskStatusSchema.optional(),
   category: taskCategorySchema.optional(),
-  priority: taskPrioritySchema.optional(),
 });
 
 export const updateTaskSchema = z.object({
@@ -38,7 +33,6 @@ export const updateTaskSchema = z.object({
   title: taskTitleSchema.optional(),
   status: taskStatusSchema.optional(),
   category: taskCategorySchema.optional(),
-  priority: taskPrioritySchema.optional(),
 });
 
 export const deleteTaskSchema = z.union([

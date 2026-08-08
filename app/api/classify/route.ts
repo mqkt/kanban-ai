@@ -86,14 +86,9 @@ export async function POST(request: Request) {
             type: SchemaType.STRING,
             enum: [...TASK_CATEGORIES],
             description: "タスクの自動カテゴリ。仕事、勉強、家事、趣味、その他のいずれか。"
-          },
-          priority: {
-            type: SchemaType.STRING,
-            enum: ["高", "中", "低"],
-            description: "タスクの緊急度・重要度から見た優先度。高、中、低のいずれか。"
           }
         },
-        required: ["category", "priority"]
+        required: ["category"]
       };
 
       const model = genAI.getGenerativeModel({
@@ -104,7 +99,7 @@ export async function POST(request: Request) {
         }
       });
 
-      const prompt = `タスクのタイトルを「${TASK_CATEGORIES.join("、")}」のいずれかに分類し、優先度（高・中・低のいずれか）を推定してください。
+      const prompt = `タスクのタイトルを「${TASK_CATEGORIES.join("、")}」のいずれかに分類してください。
 
 タスク: "${title}"`;
 

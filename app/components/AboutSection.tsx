@@ -13,7 +13,7 @@ const FEATURES = [
   {
     icon: Sparkles,
     title: "AIによる自動分類",
-    desc: "タスクを追加すると、Gemini AIがカテゴリと優先度（高・中・低）を自動推定します。",
+    desc: "タスクを追加すると、Gemini AIがカテゴリを自動推定します。",
   },
   {
     icon: Hourglass,

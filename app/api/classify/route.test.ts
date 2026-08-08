@@ -34,7 +34,7 @@ beforeEach(() => {
   __resetClassifyCacheForTests();
   process.env.GEMINI_API_KEY = "test-key";
   generateContentMock.mockResolvedValue({
-    response: { text: () => JSON.stringify({ category: "仕事", priority: "中" }) },
+    response: { text: () => JSON.stringify({ category: "仕事" }) },
   });
 });
 
@@ -111,7 +111,7 @@ describe("POST /api/classify", () => {
   it("returns 502 and does not cache a Gemini response that fails schema validation", async () => {
     authMock.mockResolvedValue({ user: { id: "user-1", isGuest: false } });
     generateContentMock.mockResolvedValue({
-      response: { text: () => JSON.stringify({ category: "宇宙", priority: "最高" }) },
+      response: { text: () => JSON.stringify({ category: "宇宙" }) },
     });
 
     const response = await POST(
@@ -125,7 +125,7 @@ describe("POST /api/classify", () => {
 
     // 不正な結果はキャッシュされていないはず — 次のリクエストも再度Geminiを呼ぶ。
     generateContentMock.mockResolvedValue({
-      response: { text: () => JSON.stringify({ category: "仕事", priority: "中" }) },
+      response: { text: () => JSON.stringify({ category: "仕事" }) },
     });
     const second = await POST(
       new Request("http://localhost/api/classify", {

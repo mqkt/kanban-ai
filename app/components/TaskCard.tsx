@@ -14,7 +14,6 @@ import {
   Calendar,
   Tag,
   Loader2,
-  Flag,
   AlertTriangle,
 } from "lucide-react";
 
@@ -29,18 +28,6 @@ const getCategoryStyles = (category: string) => {
       return "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200/50 dark:border-amber-900/30";
     case "趣味":
       return "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200/50 dark:border-rose-900/30";
-    default:
-      return "bg-slate-50 text-slate-650 dark:bg-slate-900 dark:text-slate-400 border-slate-200/50 dark:border-slate-800/80";
-  }
-};
-
-// 優先度に応じたバッジ用のカラースタイルを取得する関数
-const getPriorityStyles = (priority: string) => {
-  switch (priority) {
-    case "高":
-      return "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 border-red-200/50 dark:border-red-900/30";
-    case "中":
-      return "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200/50 dark:border-amber-900/30";
     default:
       return "bg-slate-50 text-slate-650 dark:bg-slate-900 dark:text-slate-400 border-slate-200/50 dark:border-slate-800/80";
   }
@@ -255,7 +242,7 @@ export default function TaskCard({
         </div>
       )}
 
-      {/* カテゴリ・優先度タグの表示 */}
+      {/* カテゴリタグの表示 */}
       <div className="flex flex-wrap gap-1.5 items-center select-none pt-1">
         {task.error ? (
           <span
@@ -293,12 +280,6 @@ export default function TaskCard({
                 ))}
               </select>
             </span>
-            {task.priority && (
-              <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border transition-colors ${getPriorityStyles(task.priority)}`}>
-                <Flag className="w-3 h-3" />
-                優先度: {task.priority}
-              </span>
-            )}
           </>
         )}
         {isStale && (

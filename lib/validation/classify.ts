@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TASK_CATEGORIES, TASK_PRIORITIES } from "./task";
+import { TASK_CATEGORIES } from "./task";
 
 // Gemini に渡す前の入力検証。上限文字数を設けて、無制限な入力によるプロンプト膨張・コスト増を防ぐ。
 export const classifyRequestSchema = z.object({
@@ -15,5 +15,4 @@ export const classifyRequestSchema = z.object({
 // 不正な値がキャッシュに24時間居座って全ユーザーに配信される事態を防ぐ。
 export const classifyResponseSchema = z.object({
   category: z.enum(TASK_CATEGORIES),
-  priority: z.enum(TASK_PRIORITIES),
 });

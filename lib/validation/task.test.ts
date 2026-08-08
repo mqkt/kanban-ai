@@ -42,16 +42,6 @@ describe("createTaskSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts a valid priority", () => {
-    const result = createTaskSchema.safeParse({ title: "タスク", priority: "高" });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects an invalid priority", () => {
-    const result = createTaskSchema.safeParse({ title: "タスク", priority: "緊急" });
-    expect(result.success).toBe(false);
-  });
-
   it("accepts a valid category", () => {
     const result = createTaskSchema.safeParse({ title: "タスク", category: "趣味" });
     expect(result.success).toBe(true);

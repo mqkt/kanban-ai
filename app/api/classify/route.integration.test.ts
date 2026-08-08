@@ -72,7 +72,7 @@ describe("POST /api/classify — guest usage limit (real DB)", () => {
     // 異なるタイトル(=別キャッシュキー)で同時に10件送り、毎回Geminiが呼ばれる状況を作る。
     // モックされたPrismaでは「同時アクセス時にupdateManyの条件が正しく効くか」は検証できない。
     generateContentMock.mockImplementation(async () => ({
-      response: { text: () => JSON.stringify({ category: "仕事", priority: "中" }) },
+      response: { text: () => JSON.stringify({ category: "仕事" }) },
     }));
 
     const responses = await Promise.all(
@@ -108,7 +108,7 @@ describe("POST /api/classify — guest usage limit (real DB)", () => {
   it("does not touch aiUsageCount for a non-guest user", async () => {
     authMock.mockResolvedValue({ user: { id: regularUserId, isGuest: false } });
     generateContentMock.mockResolvedValue({
-      response: { text: () => JSON.stringify({ category: "その他", priority: "低" }) },
+      response: { text: () => JSON.stringify({ category: "その他" }) },
     });
 
     const response = await POST(classifyRequest(`通常ユーザー-${randomUUID()}`));
