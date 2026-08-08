@@ -2,14 +2,14 @@
 
 import { Copy, Loader2, Merge, X } from "lucide-react";
 import { Task } from "../types/kanban";
-import { TriageSuggestion } from "../hooks/useTriage";
+import { DuplicateSuggestion } from "../hooks/useDuplicates";
 
 /**
  * ==========================================
  * 【初心者向け解説：このファイルはなぜ必要か？】
  * ==========================================
  * 「GitHubで人生を管理する」動画で紹介されている運用手法の1つ、
- * 「溜まったタスクの中から重複・統合できそうなものをAIに整理させる（トリアージ）」を
+ * 「溜まったタスクの中から重複・統合できそうなものをAIに整理させる」を
  * 再現するUIです。定期実行や自動マージは行わず、ボタンを押した時だけAIに判断させ、
  * 提案された組み合わせは1件ずつ「統合する」か「無視する」かをユーザー自身が選びます。
  *
@@ -17,15 +17,15 @@ import { TriageSuggestion } from "../hooks/useTriage";
  * 【Propsの意味】
  * ==========================================
  * - `tasks` (Task[]): 提案に含まれるタスクIDからタイトルを逆引きするために使う。
- * - `suggestions` / `isRunning` / `error` / `hasRun`: useTriageフックの状態そのもの。
+ * - `suggestions` / `isRunning` / `error` / `hasRun`: useDuplicatesフックの状態そのもの。
  * - `onRun`: 「重複をチェック」ボタン押下時にAI呼び出しを実行する関数。
  * - `onDismiss`: ある提案を「無視」して一覧から消す関数。
  * - `onMerge`: ある提案を実際に統合（1件を残して残りを削除）する関数。
  */
 
-interface TriagePanelProps {
+interface DuplicatePanelProps {
   tasks: Task[];
-  suggestions: TriageSuggestion[];
+  suggestions: DuplicateSuggestion[];
   isRunning: boolean;
   error: string | null;
   hasRun: boolean;
@@ -34,7 +34,7 @@ interface TriagePanelProps {
   onMerge: (index: number) => void;
 }
 
-export default function TriagePanel({
+export default function DuplicatePanel({
   tasks,
   suggestions,
   isRunning,
@@ -43,7 +43,7 @@ export default function TriagePanel({
   onRun,
   onDismiss,
   onMerge,
-}: TriagePanelProps) {
+}: DuplicatePanelProps) {
   const titleFor = (taskId: string) =>
     tasks.find((task) => task.id === taskId)?.title ?? "（削除済み）";
 

@@ -1,4 +1,4 @@
-import { CLASSIFY_MODEL, TRIAGE_MODEL } from "./constants";
+import { CLASSIFY_MODEL, DUPLICATE_MODEL } from "./constants";
 
 // ユーザー単位の制限（ゲストのaiUsageCount等）だけでは、Gemini無料枠という
 // 「アプリ全体で共有された1日あたりの資源」は守れない。ログイン済みユーザーには
@@ -22,7 +22,7 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 // 余地を残している。
 const DAILY_LIMITS: Record<string, number> = {
   [CLASSIFY_MODEL]: 450,
-  [TRIAGE_MODEL]: 450,
+  [DUPLICATE_MODEL]: 450,
 };
 
 const counters = new Map<string, Counter>();

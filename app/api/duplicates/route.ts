@@ -4,15 +4,15 @@ import { TaskStatus } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { GUEST_AI_LIMIT } from "@/lib/guest";
-import { triageResponseSchema } from "@/lib/validation/triage";
+import { duplicateResponseSchema } from "@/lib/validation/duplicates";
 import { logger } from "@/lib/logger";
 import { reserveGeminiCall } from "@/lib/geminiBudget";
-import { TRIAGE_MODEL } from "@/lib/constants";
+import { DUPLICATE_MODEL } from "@/lib/constants";
 
 export const runtime = "nodejs";
 
 // 一度に渡すタスク数の上限。プロンプト膨張・コスト増を防ぐ。
-const MAX_TASKS_FOR_TRIAGE = 100;
+const MAX_TASKS_FOR_DUPLICATE_CHECK = 100;
 
 // オンデマンドで実行する「重複・統合候補の検出」。定期実行（cron等）による自動マージは
 // 誤検出時のデータ損失リスクがあるため行わず、必ずユーザーが1件ずつ確認してから
@@ -36,7 +36,7 @@ export async function POST() {
       where: { userId: session.user.id, status: { not: TaskStatus.DONE } },
       orderBy: { createdAt: "desc" },
       select: { id: true, title: true, category: true },
-      take: MAX_TASKS_FOR_TRIAGE,
+      take: MAX_TASKS_FOR_DUPLICATE_CHECK,
     });
 
     if (tasks.length < 2) {
@@ -59,7 +59,7 @@ export async function POST() {
 
     // ユーザー単位の制限とは別に、Gemini無料枠というアプリ全体で共有された
     // 1日あたりの資源自体も保護する（詳細はlib/geminiBudget.ts参照）。
-    if (!reserveGeminiCall(TRIAGE_MODEL)) {
+    if (!reserveGeminiCall(DUPLICATE_MODEL)) {
       return NextResponse.json(
         { error: "本日のAI機能の利用上限に達しました。しばらくしてから再度お試しください。" },
         { status: 429 }
@@ -98,7 +98,7 @@ export async function POST() {
     };
 
     const model = genAI.getGenerativeModel({
-      model: TRIAGE_MODEL,
+      model: DUPLICATE_MODEL,
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema,
@@ -121,9 +121,9 @@ ${taskListText}`;
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
 
-    const validated = triageResponseSchema.safeParse(JSON.parse(responseText));
+    const validated = duplicateResponseSchema.safeParse(JSON.parse(responseText));
     if (!validated.success) {
-      logger.error("Triage response failed schema validation", {
+      logger.error("Duplicate-check response failed schema validation", {
         issues: validated.error.issues,
       });
       return NextResponse.json(
@@ -150,7 +150,7 @@ ${taskListText}`;
 
     return NextResponse.json({ suggestions });
   } catch (error) {
-    logger.error("Triage API Error", {
+    logger.error("Duplicate-check API Error", {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(

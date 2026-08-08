@@ -67,7 +67,7 @@ Skipping it makes the effect read as "semi-transparent card," not glass.
 `@utility` classes. Only these need to change — component files (`.tsx`)
 stay untouched since they just reference the class names.
 
-- **`panel-card`** (header, form container, triage panel, filter bar) →
+- **`panel-card`** (header, form container, duplicate panel, filter bar) →
   full glass treatment: translucent background, blur, border, both
   shadows above.
 - **`lane-box`** (kanban columns) → glass, but slightly more opaque
