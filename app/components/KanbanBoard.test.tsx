@@ -40,7 +40,7 @@ describe("KanbanBoard category filter", () => {
     );
 
     const user = userEvent.setup();
-    render(<KanbanBoard isGuest={false} />);
+    render(<KanbanBoard isGuest={false} userName="テストユーザー" userImage={null} />);
 
     await waitFor(() =>
       expect(screen.getByText("仕事のタスク")).toBeInTheDocument()

@@ -13,9 +13,11 @@ import AboutSection from "./AboutSection";
 
 interface KanbanBoardProps {
   isGuest: boolean;
+  userName: string | null;
+  userImage: string | null;
 }
 
-export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
+export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoardProps) {
   const {
     tasks,
     isDarkMode,
@@ -94,6 +96,8 @@ export default function KanbanBoard({ isGuest }: KanbanBoardProps) {
           hasCompletedTasks={tasks.some((t) => t.status === "DONE")}
           clearCompletedTasks={clearCompletedTasks}
           isGuest={isGuest}
+          userName={userName}
+          userImage={userImage}
         />
 
         {loadError && (
