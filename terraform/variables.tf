@@ -60,7 +60,7 @@ variable "database_tier" {
 
 variable "database_deletion_protection" {
   type        = bool
-  description = "Cloud SQLインスタンスの削除保護を有効にするかどうかです。本番運用では true を推奨します。destroyする場合は事前にこれを false にしてapplyし直す必要があります（DEPLOYS_GUIDE.mdの「お片付け」参照）。"
+  description = "Cloud SQLインスタンスの削除保護を有効にするかどうかです。本番運用では true を推奨します。destroyする場合は事前にこれを false にしてapplyし直す必要があります。"
   default     = true
 }
 
@@ -85,4 +85,10 @@ variable "cron_secret" {
   type        = string
   description = "期限切れゲスト自動削除API（/api/admin/cleanup-guests）を保護するシークレットです。Cloud Scheduler からの呼び出しをこの値のBearerトークンで認証します。"
   sensitive   = true
+}
+
+variable "app_url" {
+  type        = string
+  description = "アプリの正式な公開URL。Auth.js（AUTH_URL）に明示的に渡し、OAuthのredirect_uri構築をリクエストヘッダー頼みの自動判定に任せない。Cloud Runのデフォルトドメインは初回デプロイ後に確定するため、サービス作成後にこの値を実際のURLへ更新してterraform applyし直す運用とする。"
+  default     = "https://nextjs-app-ta5aoszrnq-an.a.run.app"
 }

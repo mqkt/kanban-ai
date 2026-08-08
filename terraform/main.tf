@@ -274,6 +274,16 @@ resource "google_cloud_run_v2_service" "web_app" {
         }
       }
 
+      # Cloud Run標準ドメイン+GFE経由の環境では、Auth.jsのtrustHostによる
+      # ヘッダーベースのホスト自動判定が、認可リクエスト時とコールバック時で
+      # 食い違うことがある（redirect_uriの不一致でGoogle側が
+      # invalid_request/"OAuth 2.0 policy for keeping apps secure"を返す）。
+      # AUTH_URLを明示指定し、両リクエストで同じredirect_uriが使われるようにする。
+      env {
+        name  = "AUTH_URL"
+        value = var.app_url
+      }
+
       volume_mounts {
         name       = "cloudsql"
         mount_path = "/cloudsql"
@@ -286,6 +296,18 @@ resource "google_cloud_run_v2_service" "web_app" {
         }
       }
     }
+  }
+
+  # イメージ・ラベル・client(_version)はGitHub Actions（deploy.yml）が
+  # `gcloud run deploy`で直接更新する運用のため、Terraform側の値（初回ブート用の
+  # placeholderイメージ）で上書き（＝本番を巻き戻す）しないよう無視する。
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      template[0].labels,
+      client,
+      client_version,
+    ]
   }
 }
 
