@@ -60,7 +60,6 @@ model Task {
   title     String
   status    TaskStatus @default(TODO)
   category  String?
-  priority  String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 

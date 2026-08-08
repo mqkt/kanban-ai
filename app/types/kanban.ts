@@ -41,9 +41,6 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   DONE: "完了",
 };
 
-// タスクの優先度（Geminiによる自動推定）。
-export type TaskPriority = "高" | "中" | "低";
-
 // 2. 1つのタスクカードが持つデータの構造定義
 export interface Task {
   id: string;        // タスクを一意に識別するためのユニークなID
@@ -52,7 +49,6 @@ export interface Task {
   createdAt: number; // タスクが作成された日時（JSONやlocalStorageに安全に保存するため、タイムスタンプ数値で管理）
   updatedAt?: number; // タスクが最後に更新された日時（停滞タスク検知に使用）
   category?: string; // 自動分類されたカテゴリ
-  priority?: TaskPriority; // 自動推定された優先度
   isClassifying?: boolean; // AIによる分類処理中を示すフラグ
   error?: string | boolean; // AIによる分類処理のエラー状態
 }

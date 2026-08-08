@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Task, TaskStatus } from "../types/kanban";
 
 type TaskPatch = Partial<
-  Pick<Task, "title" | "status" | "priority">
+  Pick<Task, "title" | "status">
 > & { category?: string | null };
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -135,7 +135,6 @@ export function useKanban() {
     try {
       const classifyData = await requestJson<{
         category?: string;
-        priority?: Task["priority"];
       }>("/api/classify", {
         method: "POST",
         body: JSON.stringify({ title: trimmedTitle }),
@@ -143,7 +142,6 @@ export function useKanban() {
 
       await patchTask(taskId, {
         category: classifyData.category,
-        priority: classifyData.priority,
       });
       setTasks((prev) =>
         prev.map((task) =>

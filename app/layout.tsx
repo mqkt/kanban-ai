@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Kanban Dashboard",
-  description: "タスクのカテゴリ・優先度をAIが自動判定し、重複タスクの検出もできます。",
+  description: "タスクのカテゴリをAIが自動判定し、重複タスクの検出もできます。",
 };
 
 export default async function RootLayout({

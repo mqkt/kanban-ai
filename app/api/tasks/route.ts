@@ -19,7 +19,6 @@ const taskSelect = {
   title: true,
   status: true,
   category: true,
-  priority: true,
   createdAt: true,
   updatedAt: true,
 };
@@ -29,7 +28,6 @@ function serializeTask(task: {
   title: string;
   status: TaskStatus;
   category: string | null;
-  priority: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -38,7 +36,6 @@ function serializeTask(task: {
     title: task.title,
     status: task.status,
     category: task.category ?? undefined,
-    priority: task.priority ?? undefined,
     createdAt: task.createdAt.getTime(),
     updatedAt: task.updatedAt.getTime(),
   };
@@ -130,14 +127,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const { title, status, category, priority } = parsed.data;
+  const { title, status, category } = parsed.data;
   const task = await prisma.task.create({
     data: {
       userId,
       title,
       status: status ?? TaskStatus.TODO,
       category: category ?? undefined,
-      priority: priority ?? undefined,
     },
     select: taskSelect,
   });
@@ -165,7 +161,6 @@ export async function PATCH(request: Request) {
   if ("title" in fields) data.title = fields.title;
   if ("status" in fields) data.status = fields.status;
   if ("category" in fields) data.category = fields.category;
-  if ("priority" in fields) data.priority = fields.priority;
 
   // updateMany による所有権チェックと再取得を1トランザクションにまとめ、
   // 両クエリの間に別リクエストが割り込む TOCTOU ギャップを閉じる。

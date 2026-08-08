@@ -100,7 +100,7 @@ export default function TaskForm({ onSubmit, isLoading = false }: TaskFormProps)
       {/* AI自動分類の予告アシストメッセージ */}
       <div className="flex items-center gap-1.5 px-1 py-0.5 text-xs text-blue-500/85 dark:text-blue-400/85 select-none">
         <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-pulse" />
-        <span>タスク追加後に、AIがカテゴリと優先度を自動的に推定します</span>
+        <span>タスク追加後に、AIがカテゴリを自動的に推定します</span>
       </div>
     </form>
   );
