@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth, signIn } from "@/auth";
+import { auth, signIn, signOut } from "@/auth";
 import { ArrowLeft, UserRound } from "lucide-react";
 
 // lucide-reactは汎用アイコンセットでブランドロゴを含まないため、
@@ -63,6 +63,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <form
           action={async () => {
             "use server";
+            // ゲストのセッションCookieを残したままGoogle認証を開始すると、Auth.jsは
+            // 「新規サインイン」ではなく「今ログイン中のユーザーにGoogleアカウントを
+            // 連携する」操作だと解釈する。その結果Googleアカウントがゲストの使い捨て
+            // ユーザー行に紐付いてしまい、以後そのGoogleアカウントは別セッションから
+            // 二度とサインインに使えなくなる（OAuthAccountNotLinkedで恒久的に詰む）。
+            // signIn前に必ずセッションを破棄し、常に「新規サインイン」として扱わせる。
+            await signOut({ redirect: false });
             await signIn("google", { redirectTo: callbackUrl });
           }}
         >
