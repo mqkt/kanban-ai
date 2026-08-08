@@ -114,14 +114,21 @@ export default function BoardHeader({
           )}
         </button>
 
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="btn-action-secondary"
-          aria-label="ログアウト"
-          title="ログアウト"
-        >
-          <LogOut className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-        </button>
+        {/* ゲストには「ログアウトすべき永続アカウント」がそもそも存在しない。
+            signOutしてもセッションが消えるだけで、`/`への遷移時にAutoGuestStartが
+            即座に新しい使い捨てゲストを発行し直すため、実質「今のタスクを黙って
+            捨てて別アカウントに切り替わる」ボタンになってしまう。「ログイン」と
+            対称に、正式ユーザー（!isGuest）の時だけ表示する。 */}
+        {!isGuest && (
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="btn-action-secondary"
+            aria-label="ログアウト"
+            title="ログアウト"
+          >
+            <LogOut className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+          </button>
+        )}
       </div>
     </header>
   );
