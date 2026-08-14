@@ -90,10 +90,10 @@ export default function KanbanLane({
       }`}
     >
       {/* レーンヘッダー */}
-      <div className="p-4 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-850/60 bg-white/20 dark:bg-slate-900/10">
+      <div className="p-4 flex items-center justify-between border-b border-stone-200 dark:border-stone-800">
         <div className="flex items-center gap-2.5">
           {lane.icon}
-          <h2 className="font-extrabold text-sm sm:text-base tracking-wide uppercase text-slate-700 dark:text-slate-200">
+          <h2 className="font-extrabold text-sm sm:text-base tracking-wide uppercase text-stone-700 dark:text-stone-200">
             {lane.title}
           </h2>
         </div>
@@ -109,9 +109,9 @@ export default function KanbanLane({
       <div className="flex-1 p-4 flex flex-col gap-3 overflow-y-auto max-h-[650px]">
         {tasks.length === 0 ? (
           // タスクが0件のときに表示するメッセージ（条件分岐レンダリング）
-          <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-slate-200 dark:border-slate-800/40 rounded-xl bg-white/20 dark:bg-slate-900/10">
-            <HelpCircle className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-2" />
-            <p className="text-xs sm:text-sm text-slate-400 dark:text-slate-500 text-center font-medium">
+          <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-900/40">
+            <HelpCircle className="w-8 h-8 text-stone-300 dark:text-stone-700 mb-2" />
+            <p className="text-xs sm:text-sm text-stone-400 dark:text-stone-500 text-center font-medium">
               ここにカードをドロップするか
               <br />
               タスクを追加してください

@@ -29,7 +29,7 @@ const getCategoryStyles = (category: string) => {
     case "趣味":
       return "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200/50 dark:border-rose-900/30";
     default:
-      return "bg-slate-50 text-slate-650 dark:bg-slate-900 dark:text-slate-400 border-slate-200/50 dark:border-slate-800/80";
+      return "bg-stone-50 text-stone-600 dark:bg-stone-900 dark:text-stone-400 border-stone-200/50 dark:border-stone-800/80";
   }
 };
 
@@ -176,7 +176,7 @@ export default function TaskCard({
                 handleCancelEdit();
               }
             }}
-            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 text-slate-700 dark:text-slate-200 resize-none min-h-[60px]"
+            className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg p-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 text-stone-700 dark:text-stone-200 resize-none min-h-[60px]"
             autoFocus
             placeholder="タスクのタイトル..."
           />
@@ -185,7 +185,7 @@ export default function TaskCard({
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 rounded hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
               title="キャンセル"
             >
               <X className="w-4 h-4" />
@@ -205,9 +205,9 @@ export default function TaskCard({
           {/* タイトルテキスト表示 (ダブルクリックでも編集モードに入れます) */}
           <span
             onDoubleClick={handleStartEdit}
-            className={`text-sm font-semibold tracking-wide leading-relaxed select-none break-all flex-1 text-slate-700 dark:text-slate-200 ${
+            className={`text-sm font-semibold tracking-wide leading-relaxed select-none break-all flex-1 text-stone-700 dark:text-stone-200 ${
               task.status === "DONE"
-                ? "text-slate-450 dark:text-slate-550 line-through font-normal"
+                ? "text-stone-400 dark:text-stone-500 line-through font-normal"
                 : ""
             }`}
             title="ダブルクリックで編集"
@@ -222,7 +222,7 @@ export default function TaskCard({
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 flex-shrink-0">
             <button
               onClick={handleStartEdit}
-              className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              className="p-1.5 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800 transition-all cursor-pointer"
               title="編集"
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -233,7 +233,7 @@ export default function TaskCard({
                   deleteTask(task.id);
                 }
               }}
-              className="p-1.5 text-slate-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
+              className="p-1.5 text-stone-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
               title="削除"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -246,14 +246,14 @@ export default function TaskCard({
       <div className="flex flex-wrap gap-1.5 items-center select-none pt-1">
         {task.error ? (
           <span
-            className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border bg-red-50/60 text-red-600 dark:bg-red-950/20 dark:text-red-400 border-red-200/50 dark:border-red-900/30"
+            className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 border-red-200/50 dark:border-red-900/30"
             title={typeof task.error === "string" ? task.error : "AI分析に失敗しました"}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
             <span>⚠️ AI分析エラー</span>
           </span>
         ) : task.isClassifying ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30 animate-pulse">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30 animate-pulse">
             <Loader2 className="w-3 h-3 animate-spin text-blue-600 dark:text-blue-400" />
             <span>🤖 AI分析中...</span>
           </span>
@@ -262,7 +262,7 @@ export default function TaskCard({
             {/* カテゴリはAIが自動分類するだけでなく、ここで手動でも変更できる。
                 自由入力ではなくTASK_CATEGORIESの固定選択肢にすることで、絞り込み・色分けと
                 整合させている（表記ゆれで同じ意味のカテゴリが増えるのを防ぐ）。 */}
-            <span className={`inline-flex items-center gap-1 text-xs font-bold pl-2 pr-1 py-0.5 rounded-md border transition-colors ${getCategoryStyles(task.category ?? "")}`}>
+            <span className={`inline-flex items-center gap-1 text-xs font-bold pl-2 pr-1 py-0.5 rounded-full border transition-colors ${getCategoryStyles(task.category ?? "")}`}>
               <Tag className="w-3 h-3" />
               <select
                 value={task.category ?? ""}
@@ -284,7 +284,7 @@ export default function TaskCard({
         )}
         {isStale && (
           <span
-            className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-400 border-sky-200/50 dark:border-sky-900/30"
+            className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-400 border-sky-200/50 dark:border-sky-900/30"
             title="3日以上ステータスが変わっていません"
           >
             <AlertTriangle className="w-3 h-3" />
@@ -294,11 +294,10 @@ export default function TaskCard({
       </div>
 
       {/* フッター領域: 日付とクイック移動ボタン */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-850/60 text-[10px] text-slate-400 dark:text-slate-500 select-none">
-        
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-stone-100 dark:border-stone-800/60 text-[10px] text-stone-400 dark:text-stone-500 select-none">
         {/* 作成日時表示 */}
         <span className="flex items-center gap-1 font-medium">
-          <Calendar className="w-3 h-3 text-slate-450" />
+          <Calendar className="w-3 h-3 text-stone-400" />
           {formatDate(task.createdAt)}
         </span>
 
@@ -309,7 +308,7 @@ export default function TaskCard({
             {previousStatus && (
               <button
                 onClick={() => updateTaskStatus(task.id, previousStatus)}
-                className="p-1 flex items-center gap-0.5 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 rounded hover:bg-slate-50 dark:hover:bg-slate-850 border border-slate-200/50 dark:border-slate-800/80 transition-colors duration-250 cursor-pointer"
+                className="p-1 flex items-center gap-0.5 text-stone-400 hover:text-blue-500 dark:hover:text-blue-400 rounded hover:bg-stone-50 dark:hover:bg-stone-800 border border-stone-200/50 dark:border-stone-800/80 transition-colors duration-200 cursor-pointer"
                 title="左のレーンへ移動"
               >
                 <ArrowLeft className="w-3 h-3" />
@@ -323,7 +322,7 @@ export default function TaskCard({
             {nextStatus && (
               <button
                 onClick={() => updateTaskStatus(task.id, nextStatus)}
-                className="p-1 flex items-center gap-0.5 text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 rounded hover:bg-slate-50 dark:hover:bg-slate-850 border border-slate-200/50 dark:border-slate-800/80 transition-colors duration-250 cursor-pointer"
+                className="p-1 flex items-center gap-0.5 text-stone-400 hover:text-emerald-500 dark:hover:text-emerald-400 rounded hover:bg-stone-50 dark:hover:bg-stone-800 border border-stone-200/50 dark:border-stone-800/80 transition-colors duration-200 cursor-pointer"
                 title="右のレーンへ移動"
               >
                 <span className="text-[9px] font-bold">

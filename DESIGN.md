@@ -1,121 +1,178 @@
-# Liquid Glass (Lite) — Design Spec
+# Kanban Dashboard — DESIGN.md
 
-Apple's Liquid Glass (WWDC25 / iOS 26) is a real-time refractive material
-built on SVG displacement filters. On the web that "true" version only
-works in Chromium (`backdrop-filter` doesn't accept SVG filter input in
-Safari/Firefox) and is expensive to render.
+Follows the emerging [DESIGN.md convention](https://github.com/google-labs-code/design.md)
+(YAML tokens + human-readable rationale, for both humans and coding agents).
+Scoped to what this app actually has — a handful of shared utility classes
+in `app/globals.css`, not a full marketing-site component library.
 
-This app uses the **lightweight approximation** instead: plain CSS
-(`backdrop-filter: blur()` + translucency + a soft highlight border). It
-works in every modern browser, costs almost nothing to render, and gets
-~80% of the visual effect for ~5% of the complexity.
+```yaml
+version: 1
+name: kanban-dashboard-design
+description: >
+  A warm, minimal, opaque design system inspired by Notion's product
+  surfaces — flat cards, 1px hairline borders, and rounded-rectangle
+  buttons instead of pill shapes. Replaced an earlier "Liquid Glass"
+  (translucent, backdrop-blur) direction that read as a generic
+  AI-generated-SaaS look. The blue-600 brand color was kept from that
+  earlier system; only the surface treatment (glass -> flat/hairline)
+  and the neutral palette (slate -> stone, a warmer gray) changed.
 
-Sources: [Apple Newsroom — Liquid Glass](https://www.apple.com/newsroom/2025/06/apple-introduces-a-delightful-and-elegant-new-software-design/), [LogRocket — Liquid Glass with CSS and SVG](https://blog.logrocket.com/how-create-liquid-glass-effects-css-and-svg/)
+colors:
+  primary: "#2563eb" # blue-600 — the one accent color, used sparingly
+  primary-hover: "#1d4ed8" # blue-700
+  canvas-light: "#ffffff" # stone-50 canvas is the page bg; cards are pure white
+  surface-light: "#fafaf9" # stone-50
+  surface-dark: "#0c0a09" # stone-950
+  card-dark: "#1c1917" # stone-900
+  hairline-light: "#e7e5e4" # stone-200
+  hairline-dark: "#292524" # stone-800
+  ink-light: "#44403c" # stone-700, primary text
+  ink-dark: "#e7e5e4" # stone-200
+  muted-light: "#a8a29e" # stone-400, secondary/placeholder text
+  muted-dark: "#78716c" # stone-500
+  danger: "#dc2626" # red-600, delete/destructive actions only
 
----
+typography:
+  font-family: Geist (next/font/google), fallback Arial/Helvetica/sans-serif
+  heading:
+    fontSize: 20-24px
+    fontWeight: 800
+  body:
+    fontSize: 14-16px
+    fontWeight: 500-600
+  label:
+    fontSize: 12-13px
+    fontWeight: 700
 
-## Why glass needs something behind it
+rounded:
+  buttons: 8px # rounded-lg — rectangular, not pill-shaped
+  cards: 12px # rounded-xl
+  badges: 9999px # rounded-full — the one place pills are used
 
-`backdrop-filter: blur()` blurs whatever is *behind* the element. A flat
-single-color page background gives it nothing to blur — the glass effect
-disappears. `app-bg` gets a fixed, soft gradient wash so every glass
-surface on top of it has something to refract.
+elevation:
+  resting: "0 1px 2px rgba(15, 15, 15, 0.04)"
+  hover: "0 4px 12px rgba(15, 15, 15, 0.08)"
 
-An earlier version of this used three colored blobs (blue, violet, pink) —
-the same radial-gradient trio that's become a visual cliché on AI-product
-marketing pages. Swapped it for a single low-opacity wash of the app's own
-brand blue (`blue-600`), reading as one soft light source from a corner
-rather than a "generated" hero background.
-
-```css
-@utility app-bg {
-  @apply bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 transition-colors duration-300;
-  background-image: radial-gradient(at 15% 0%, rgba(37, 99, 235, 0.07) 0px, transparent 60%);
-  background-attachment: fixed;
-}
-
-html.dark .app-bg {
-  background-image: radial-gradient(at 15% 0%, rgba(37, 99, 235, 0.16) 0px, transparent 60%);
-}
+components:
+  panel-card:
+    background: "{colors.canvas-light}"
+    border: "1px solid {colors.hairline-light}"
+    rounded: "{rounded.cards}"
+    shadow: "{elevation.resting}"
+  task-card-clean:
+    background: "{colors.canvas-light}"
+    border: "1px solid {colors.hairline-light}"
+    rounded: 8px
+    shadow: "{elevation.resting}"
+    hoverShadow: "{elevation.hover}"
+  btn-action-primary:
+    background: "{colors.primary}"
+    textColor: "#ffffff"
+    rounded: "{rounded.buttons}"
+  btn-action-secondary:
+    background: "{colors.canvas-light}"
+    border: "1px solid {colors.hairline-light}"
+    rounded: "{rounded.buttons}"
+  btn-action-danger:
+    background: "#fef2f2" # red-50
+    textColor: "{colors.danger}"
+    rounded: "{rounded.buttons}"
 ```
 
-`background-attachment: fixed` also keeps the gradient from repainting on
-scroll, which matters because scrolling under several `backdrop-filter`
-elements is the expensive case.
+## Overview
 
----
+This app moved from a glassmorphism direction ("Liquid Glass", see git
+history) to a flatter, warmer style closer to Notion's product surfaces:
+opaque white/stone cards, thin hairline borders instead of blur, and
+rectangular buttons instead of pills. The one brand accent color
+(`blue-600`) was kept — only the surface treatment and the neutral gray
+hue changed (Tailwind's `slate` → `stone`, which reads warmer).
 
-## Glass surface tokens
+## Colors
 
-| Property | Light | Dark |
-|---|---|---|
-| Surface background | `bg-white/55` | `dark:bg-slate-900/45` |
-| Blur | `backdrop-blur-xl` (24px) | same |
-| Border | `border-white/50` | `dark:border-white/10` |
-| Top highlight (specular edge) | `shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]` | `dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]` |
-| Depth shadow | `shadow-[0_8px_32px_rgba(31,38,135,0.12)]` | `dark:shadow-[0_8px_32px_rgba(0,0,0,0.35)]` |
+The palette has exactly one accent color (`{colors.primary}`, blue) used
+for the primary CTA, active filter state, and interactive focus rings —
+deliberately not spread across every element, so it stays legible as
+"the one clickable thing." Everything else is neutral (`stone`) or
+semantic (`red` for destructive actions, plus four fixed hues for task
+categories: `blue`/`indigo`/`amber`/`rose` for 仕事/勉強/家事/趣味,
+`stone` for その他 — see `getCategoryStyles` in `TaskCard.tsx`). Lane
+accent colors (blue/amber/purple/emerald for the four `TaskStatus`
+values) are a separate, intentionally different four-color set from the
+category colors, so a lane badge and a category badge are never
+visually confusable.
 
-The "top highlight" is what sells the glass illusion — a 1px inset light
-line along the top edge, like light catching the rim of real glass.
-Skipping it makes the effect read as "semi-transparent card," not glass.
+## Typography
 
----
+Geist (via `next/font/google`), applied globally through `body`'s
+`font-family: var(--font-geist-sans), ...` — previously only applied
+inside `KanbanBoard`'s own `font-sans` class, so `/login` silently fell
+back to the Arial/Helvetica system fallback instead of Geist. (The
+Tailwind theme token `--font-sans` looked like the "correct" thing to
+reference here, but it's defined at `:root` as `var(--font-geist-sans)`
+while `--font-geist-sans` itself only exists on `<body>` via next/font's
+CSS-module class — an ancestor can't resolve a descendant's custom
+property, so `--font-sans` silently resolved to nothing. Referencing
+`--font-geist-sans` directly on `body` sidesteps the scoping problem.)
+Headings are bold
+(800) and compact (20-24px); this is a dense utility dashboard, not a
+marketing page, so there's no large display type scale.
 
-## Mapping onto existing utility classes
+## Layout
 
-`app/globals.css` already centralizes all surface styling as Tailwind
-`@utility` classes. Only these need to change — component files (`.tsx`)
-stay untouched since they just reference the class names.
+No fixed 4px/8px spacing token scale is defined — spacing is expressed
+directly as Tailwind utilities (`gap-3`, `p-4`, `px-5 py-3`, etc.) at
+each call site rather than through named tokens, since the component
+count is small enough that a token indirection layer wouldn't pay for
+itself yet.
 
-- **`panel-card`** (header, form container, duplicate panel, filter bar) →
-  full glass treatment: translucent background, blur, border, both
-  shadows above.
-- **`lane-box`** (kanban columns) → glass, but slightly more opaque
-  (`bg-white/40` light / `bg-slate-900/35` dark) so the four columns don't
-  fight each other visually when a card's own glass sits on top.
-- **`task-card-clean`** → glass, more opaque still (`bg-white/70` /
-  `bg-slate-900/60`) since this is where the actual content (task titles)
-  needs to stay legible over the busiest part of the background.
-- **`input-clean`** → keep mostly solid (`bg-white/90` /
-  `bg-slate-950/80`) — form inputs need reliable contrast for the text
-  being typed, glass is decorative here, not functional.
-- **`btn-action-secondary`** (icon buttons: theme toggle, logout) → glass.
-- **`btn-action-primary`** (main CTA, filled blue) → **no glass**. A
-  solid, opaque primary action button is a deliberate exception: glass
-  is for surfaces, not for the one interactive element that most needs
-  unambiguous contrast and click affordance.
-- **`btn-action-danger`** → no glass, same reasoning as primary.
+## Elevation & Depth
 
----
+Two levels only: resting (`{elevation.resting}`, a near-invisible 1px
+shadow that mostly exists to separate a white card from a white/stone-50
+page background) and hover (`{elevation.hover}`, used on draggable task
+cards to signal interactivity). No blur, no inset highlight — those were
+specific to the retired glass treatment.
 
-## Accessibility / fallback
+## Shapes
 
-```css
-@media (prefers-reduced-transparency: reduce) {
-  .panel-card, .lane-box, .task-card-clean, .btn-action-secondary {
-    backdrop-filter: none;
-    background-color: white;
-  }
-  html.dark .panel-card,
-  html.dark .lane-box,
-  html.dark .task-card-clean,
-  html.dark .btn-action-secondary {
-    background-color: theme(colors.slate.900);
-  }
-}
-```
+Buttons use `{rounded.buttons}` (8px, rectangular) deliberately, not
+pill shapes — pills are reserved for `rounded-full` badges (category
+tags, lane count badges, the guest/account identity chip) where a pill
+communicates "status label" rather than "clickable action."
 
-Also: never drop text below ~4.5:1 contrast against the *most saturated*
-point the gradient can reach behind it, not just the average — glass
-surfaces must stay opaque enough that legibility doesn't depend on what
-happens to be scrolled underneath.
+## Components
 
----
+- **`panel-card`** — the base card: header, task-form + duplicate-check
+  panel, category filter row (when wrapped), loading/error states.
+- **`lane-box`** — the four Kanban lanes (未着手/進行中/保留/完了).
+- **`task-card-clean`** — individual draggable task cards; the only
+  component with a hover-elevation change, since it's the one
+  interactive/draggable surface.
+- **`input-clean`** — the task-title text input.
+- **`btn-action-primary`** / **`btn-action-secondary`** / **`btn-action-danger`** —
+  the three button treatments (primary CTA, neutral/icon actions,
+  destructive actions).
 
-## Performance rule
+All five are defined once in `app/globals.css` via Tailwind's
+`@utility`, not duplicated per-component.
 
-`backdrop-filter` is not free. Cap it at the four class names above —
-don't add it to every nested `<span>` badge or hover state. This app
-already keeps glass to a bounded set of surfaces (panels, lanes, cards,
-icon buttons), which is well inside the range LogRocket's writeup flags
-as safe for low-power devices.
+## Do's and Don'ts
+
+- Do keep `{colors.primary}` (blue) as the only real accent — resist
+  adding more brand colors for "visual interest"
+- Do use `{rounded.buttons}` (rectangular) for anything clickable as a
+  button; reserve `rounded-full` for status/label pills
+- Don't reintroduce `backdrop-filter`/translucent (`bg-white/NN`)
+  surfaces for the shared card/button utilities — that was the
+  previous, retired direction
+- Don't add a large marketing-style type scale (48px+ headings); this
+  is a dense dashboard, not a landing page
+
+## Accessibility
+
+Removed the `prefers-reduced-transparency` fallback that the old glass
+system needed — an opaque design has nothing to reduce. Focus rings
+(`focus:ring-4 focus:ring-blue-500/10`) and border-only category badges
+still carry non-color signal (border + label text), so category
+distinctions don't depend on color perception alone.

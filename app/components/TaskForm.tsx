@@ -77,7 +77,7 @@ export default function TaskForm({ onSubmit, isLoading = false }: TaskFormProps)
             aria-invalid={errors.title ? "true" : "false"}
           />
           {/* テキストボックス内の左側アイコン */}
-          <Plus className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+          <Plus className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5" />
         </div>
 
         {/* タスクを追加するボタン */}
