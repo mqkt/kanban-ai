@@ -20,103 +20,6 @@ AI によるタスク自動分類を備えた、Next.js 製のかんばんボー
 - 3日以上ステータスが変わっていないタスクの停滞検知
 - AIによる重複タスクの検出・統合提案
 
-## AIとの協働プロセス
-
-このリポジトリは、実装の大部分を [Claude Code](https://claude.com/claude-code) と対話しながら進めています。
-
-### 進め方
-
-1. まず非機能要件のギャップ（バリデーション、テスト、可観測性、レートリミット、ページネーション、キャッシュ、CSRF、DBトランザクション、READMEの記述不足など）を洗い出し、優先順位を付けたタスクリストを作成
-2. Claude Codeのサブエージェント（Explore）にコードベース全体の現状調査を任せ、各項目が実際に「有る/無い」を根拠となるファイル・行番号付きで確認してから着手（推測で「無いはず」と決めつけない）
-3. リスト上から順に、1項目ずつ実装 → 型チェック・Lint・テスト・ビルド → 実際にブラウザで動作確認、というサイクルを回す
-4. 実装の進行はタスク管理機能で明示的に追跡し、着手中／完了を都度更新
-
-### AIに任せた範囲と、自分で判断した範囲
-
-- **AIに任せた部分**: 各項目の具体的な実装（Zodスキーマ設計、React Hook Formへの置き換え、テストコード、Terraformの差分など）や、複数の実現方法とそのトレードオフの提示
-- **自分で判断した部分**: 技術選定そのもの。例えばテスト基盤はJestではなくVitestを選択、APIのレートリミットは外部インフラ（Upstash Redis等）を使わずインメモリ実装に留めることを選択、構造化ログもpino等のライブラリを追加せず自前の軽量JSONラッパーで十分と判断——これらはいずれもAIが選択肢とトレードオフを提示した上で、このアプリの規模・運用コストを踏まえて自分で決定した
-- **Claudeに代行させなかった部分**: Google Cloud コンソールでの実際のログイン・課金情報の入力、発行されたAPIキーやOAuthシークレットの授受——認証情報・支払い情報が絡む操作は一貫して人間側の操作として残している。`terraform apply` / `terraform destroy` 自体は基本的にClaudeが実行しているが、破壊的な変更（リソース削除を伴う `apply` など）はClaude Code側の安全機構に自動でブロックされることがあり、その場合はコマンドをそのまま人間に渡して実行してもらっている
-
-### 生成されたコードの検証方法
-
-- **型・静的解析**: `npx tsc --noEmit` / `npm run lint` を各変更後に実行
-- **自動テスト**: ユニット（`npm run test`、Prismaはモック）と結合（`npm run test:integration`、実DB使用）を分離。モックでは「実際にDBで正しく動くか」までは検証できないため、ゲストAI利用上限の並行制御などDBの排他制御が絡む部分は結合テストで担保しています
-- **ビルド**: `npm run build` が通ることを都度確認
-- **実機確認**: Claude Codeのブラウザ操作でdevサーバーを実際に操作（ゲストログイン → タスク追加 → AI自動分類 → ネットワーク/コンソールエラー確認）して検証
-- **インフラ**: `terraform plan` で差分を確認してから `apply`。意図しない差分（本番イメージがコード上のプレースホルダーに巻き戻る等）が出た場合は `-target` や `gcloud` コマンドで安全に反映
-
-## 設計判断とトレードオフ
-
-### CSRF対策
-
-NextAuthの`SameSite=Lax`セッションCookieと、独自エンドポイント（`/api/tasks`・`/api/classify`）がJSON専用のfetchしか受け付けない仕様（素の`<form>`では再現できない）の組み合わせにより、追加のCSRFトークンなしでも安全と判断しています。
-
-### CSP（Content Security Policy）
-
-`proxy.ts`でリクエストごとに使い捨ての乱数（nonce）を発行し、`script-src`をこのnonceベース（`'unsafe-inline'`不使用、`'strict-dynamic'`付き）にしています。外部スクリプト・フォントを使わない構成なので `default-src 'self'` をそのまま適用できます。`style-src`だけは`'unsafe-inline'`を許可しています。CSS注入はXSSほど実害が大きくなく、`next dev`のHMRがnonceなしのインラインstyleを使うため、厳格化すると開発時に無害な警告で本来見るべきエラーが埋もれるためです。
-
-### レートリミット
-
-`lib/rateLimit.ts`でプロセス内メモリの固定ウィンドウ制限（IP+パスごとに1分60リクエスト）を実装しています。Upstash Redis等の外部ストアの方が正確ですが、このアプリの規模では追加コストに見合わないと判断しました。認識している限界は、Cloud Runが複数インスタンスに増えると各インスタンスが独立カウンタを持つため、合算で設定値を超えうる点です。
-
-### キャッシュ
-
-`GET /api/tasks` はユーザー固有データなのでキャッシュしません。`/api/classify` の分類結果は同じタスク名なら誰が入力しても同じになるべきなので、`lib/classifyCache.ts` でタイトルをキーにキャッシュし、Gemini呼び出しの重複を避けています。
-
-### ページネーション
-
-`GET /api/tasks` はkeyset方式（`createdAt`+`id`をエンコード）でページネーションしています。Prisma標準の`cursor`オプションだと、ページ取得中にcursor行が削除された場合（完了タスクの一括削除など）に以降のタスクが取得できなくなるバグがあったための対応です。
-
-### DBトランザクション
-
-`PATCH /api/tasks` は所有権チェックと再取得を `prisma.$transaction` でまとめています。チェックと更新の間に別リクエストが割り込んで競合する状態（TOCTOU、Time-Of-Check to Time-Of-Use）を防ぐためです。
-
-### ゲストのAI利用制限
-
-`aiUsageCount` のチェックと加算を1クエリのアトミックな条件付きUPDATEにすることで、並行リクエストによる上限超えを防いでいます。
-
-### Gemini呼び出し自体の1日上限（`lib/geminiBudget.ts`）
-
-ユーザー単位の制限（ゲストの`aiUsageCount`）だけでは、Gemini無料枠という「アプリ全体で共有された1日あたりの資源」は守れません。ログイン済みユーザーには利用回数の上限が無く、ゲストも「ゲストで試す」を押し直すたびに新しい使い捨てアカウント（＝新しい`aiUsageCount`）を得られるため、複数ユーザーが束になる、または1人が`proxy.ts`の汎用レートリミット（1分60回）のペースで叩き続けるだけで、無料枠（Lite系モデルで1日500回、いわゆる500 RPD＝Requests Per Day）を数分〜十数分で使い切れてしまいます。
-
-対応として、ユーザーに関わらず「モデルごとにアプリ全体で1日に呼べる回数」自体にも上限（450回、実際の無料枠より少し低く設定）を設けています。Cloud Runが複数インスタンスに増えるとインスタンスごとに別カウンタになる（`lib/rateLimit.ts`と同じ限界）ため完全ではありませんが、「誰か1人が無制限に呼べる」状態よりは安全側です。
-
-### カテゴリの手動編集と絞り込み
-
-AIが自動分類するだけでは、カテゴリは「表示されるだけの情報」で終わり、タグとしての意味が薄いと判断しました。カード上でカテゴリを直接変更できるようにし、さらにボード上部でカテゴリごとの絞り込み表示を追加しています。カテゴリは自由入力にせず、AI分類と同じ固定5択（`TASK_CATEGORIES`、`lib/validation/task.ts`）に揃えています。自由入力を許すと「仕事」「Work」のような表記ゆれで同じ意味のカテゴリが増殖し、絞り込みも色分けも機能しなくなるためです。この定数はAPI側のZodバリデーション・Geminiへのプロンプト・UIの選択肢すべてで共有しており、選択肢を変えたい場合も1箇所の変更で済みます。
-
-### UIデザイン（Notion風の温かみのあるミニマルデザインへの移行）
-
-当初はApple WWDC25の「Liquid Glass」を模したガラス質感（半透明＋`backdrop-filter: blur()`）を採用していましたが、Notionのプロダクト面に近い、不透明カード＋1pxヘアラインボーダー＋角丸長方形ボタンという構成に作り替えました。半透明・ぼかしは「いかにもAI生成SaaS」に寄りやすく、色調もTailwindの`slate`（やや青みがかったグレー）から`stone`（暖色寄りのグレー）へ変更しています。ブランドカラー（blue-600）は変更していません。トークン設計・理由の詳細は [DESIGN.md](DESIGN.md)（[design.md規約](https://github.com/google-labs-code/design.md)に準拠）参照。
-
-### 優先度推定を実装したが、あえて外した判断
-
-`/api/classify` のGeminiレスポンスに `priority`（高・中・低）を追加していましたが削除しました。タスクタイトルの文字列だけから緊急度・重要度を判断するのは主観が入りやすく、AIの推定結果をどこまで信頼していいか怪しい機能だったためです。カテゴリ分類（「仕事」「趣味」など）は入力から比較的機械的に決まりますが、優先度は本人の状況・締切・気分に左右されるもので、AIが一律に「高・中・低」を付けても実用上あまり信頼できないと判断しました。DBカラム・API・UIすべてから削除しています。
-
-### 同時進行タスク数の上限を実装したが、あえて外した判断
-
-「進行中は同時5件まで」という上限を一度実装しましたが削除しました。適正な同時進行数は人によって違い、固定値の強制は押し付けがましいと判断したためです。
-
-### メールリンク認証（Resend）を実装後に削除した判断
-
-Resendのメールリンクログインを実装しましたが削除しました。ドメイン認証をしない限り自分の検証済みアドレスにしか送れず、ログイン画面に「押しても機能しないボタン」が残る状態だったためです。Google OAuth・ゲストログインの2経路に絞りました。
-
-### 重複タスクの検出
-
-AIに重複・統合できそうなタスクを提案させる機能です。誤検出によるデータ損失を避けるため、オンデマンド実行のみで自動マージはせず、実行は必ずユーザーが1件ずつ判断します。Geminiにはタスクの実IDではなく連番を振って参照させ、存在しないIDを生成してしまうリスクを防いでいます。
-
-### ルート統合と自動ゲスト開始
-
-「`/` = ランディングページ」「`/app` = ボード」という2段構成を `/` 1本に統合しました。未ログインなら `AutoGuestStart` が自動でゲストセッションを開始し、ログイン画面を経由せずすぐ使い始められます。JSを実行しないbotには何も起きないため、アクセスのたびに使い捨てアカウントが増え続ける事態も避けられます。
-
-### Gemini APIキーをCloud Run/DBとは別プロジェクトに分離した理由
-
-Gemini APIは他の多くのGCPサービスと異なり、**請求先アカウントを一度でもリンクすると無料枠が即座に失われます。** Cloud Run・Cloud SQLには請求先アカウントが必須のため、当初は単一プロジェクトにまとめていましたが、これによりGemini APIも無料枠を失い、429エラーで分類・重複検出機能が止まりました。対応として、Gemini APIキーの発行元だけ別プロジェクト（請求先アカウント未リンク）に分離しました。
-
-- 無料枠のレート制限（Lite系モデルで1分15回／1日500回、有料ティアは1分4,000回）は、ポートフォリオ規模のトラフィックなら十分と判断しました
-- レート制限はモデル単位でカウントされるため、`/api/classify`（`gemini-3.5-flash-lite`、高頻度用途）と `/api/duplicates`（`gemini-3.1-flash-lite`、低頻度用途）で異なるモデルを使い、合計の実質使用可能量を2倍（1日1,000回／1分30回）にしています
-- デメリットとして管理対象のプロジェクトが1つ増えます。アーキテクチャ上の必然ではなく、無料枠維持のためのコスト回避の判断です
-
 ## 技術スタック
 
 - Next.js 16
@@ -136,3 +39,79 @@ Gemini APIは他の多くのGCPサービスと異なり、**請求先アカウ�
 - Terraform
 - GitHub Actions
 
+## セットアップ
+
+```bash
+npm install
+cp .env.example .env.local   # 値を埋める
+npx prisma generate
+npx prisma migrate deploy
+```
+
+Google OAuth のコールバックURLは以下を登録してください。
+
+```text
+http://localhost:3000/api/auth/callback/google
+https://your-cloud-run-url/api/auth/callback/google
+```
+
+## 開発
+
+```bash
+npm run dev
+```
+
+ブラウザで [http://localhost:3000](http://localhost:3000) を開いて確認してください。
+
+## Docker での起動
+
+```bash
+docker compose up --build -d
+```
+
+起動後、[http://localhost:3000](http://localhost:3000) にアクセスします（`docker compose down` で停止）。AI自動分類を使う場合は `GEMINI_API_KEY` をコンテナに渡してください。
+
+## データ保存
+
+タスクはログインユーザーごとにPostgreSQLへ保存されます。テーマ設定のみブラウザの `localStorage` に保存されます。
+
+タスクAPIはログイン必須です。ただし未ログインで `/` にアクセスすると、裏で自動的に使い捨てのゲストセッションを開始してからボードを表示するため、体感的にはログイン画面を経由しません。
+
+## API
+
+- `POST /api/classify` — タスクタイトルをGemini APIに送り、カテゴリを推定
+- `/api/tasks` — タスクの一覧取得（cursorページネーション対応）・作成・更新・削除。他ユーザーのタスクにはアクセス不可
+- `POST /api/duplicates` — 未完了タスク（最大100件）をGeminiに渡し、重複・統合できそうな組み合わせを提案（実際の統合は既存の `PATCH` / `DELETE` を利用）
+- `GET /api/health` — DB疎通確認。Cloud Runやモニタリングからのヘルスチェック用
+
+## CI / CD
+
+- `.github/workflows/ci.yml`: ESLint、Next.js ビルド、Docker ビルド検証
+- `.github/workflows/deploy.yml`: main / master への push 時に Cloud Run へデプロイ（Workload Identityで長期鍵なし認証）
+
+## Google Cloud へのデプロイ
+
+Terraform 設定は `terraform/` にあります。Cloud Run、Artifact Registry、Secret Manager、Workload Identity、Cloud SQL for PostgreSQL を構築します。tfstateはGCSのリモートバックエンドで管理しています。
+
+```bash
+cd terraform
+terraform init
+terraform plan
+terraform apply
+```
+
+`terraform.tfvars` には、少なくとも以下を設定します。
+
+```hcl
+gcp_project_id    = "your-gcp-project-id"
+github_repository = "your-github-user/your-repo"
+gemini_api_key    = "your-gemini-api-key"
+database_password = "your-db-password"
+auth_secret       = "openssl-rand-base64-32"
+auth_google_id    = "your-google-oauth-client-id"
+auth_google_secret = "your-google-oauth-client-secret"
+cron_secret       = "openssl-rand-base64-32"
+app_url           = "https://your-cloud-run-url"  # 初回デプロイ後に確定
+```
+
+本番DBのマイグレーションは、Cloud SQL接続を準備したうえで `npx prisma migrate deploy` を実行してください。
