@@ -113,7 +113,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
           <TaskForm onSubmit={addTask} isLoading={isLoading} />
 
           {!isLoading && (
-            <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4">
+            <div className="border-t border-stone-200/60 dark:border-stone-800/60 pt-4">
               <DuplicatePanel
                 tasks={tasks}
                 suggestions={duplicates.suggestions}
@@ -130,7 +130,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
 
         {!isLoading && availableCategories.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 px-1">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-500 dark:text-stone-400">
               <Filter className="w-3.5 h-3.5" />
               カテゴリで絞り込み
             </span>
@@ -144,7 +144,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
                 className={`text-xs font-bold px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
                   categoryFilter === category
                     ? "bg-blue-600 border-blue-600 text-white"
-                    : "border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
+                    : "border-stone-200 dark:border-stone-800 text-stone-500 dark:text-stone-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
                 }`}
               >
                 {category}
@@ -154,7 +154,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
               <button
                 type="button"
                 onClick={() => setCategoryFilter(null)}
-                className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                className="inline-flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 cursor-pointer"
               >
                 <X className="w-3 h-3" />
                 クリア
@@ -164,7 +164,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
         )}
 
         {isLoading ? (
-          <main className="panel-card p-8 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">
+          <main className="panel-card p-8 text-center text-sm font-semibold text-stone-500 dark:text-stone-400">
             タスクを読み込んでいます...
           </main>
         ) : (

@@ -31,10 +31,10 @@ export default function AboutSection() {
   return (
     <section className="panel-card p-6 flex flex-col gap-5">
       <div>
-        <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">
+        <h2 className="text-sm font-bold text-stone-700 dark:text-stone-200">
           このアプリについて
         </h2>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
           Gemini APIを使ったAI分類つきのかんばんボードです。未着手 → 進行中 →
           保留 → 完了の4レーンをドラッグ＆ドロップやボタンで移動でき、タスク管理を
           助ける機能をいくつか備えています。
@@ -45,20 +45,20 @@ export default function AboutSection() {
         {FEATURES.map(({ icon: Icon, title, desc }) => (
           <div
             key={title}
-            className="rounded-xl border border-slate-200/70 dark:border-slate-800/70 bg-slate-50/50 dark:bg-slate-900/30 p-3 flex flex-col gap-1.5"
+            className="rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/50 p-3 flex flex-col gap-1.5"
           >
             <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-200">
+            <h3 className="text-xs font-bold text-stone-700 dark:text-stone-200">
               {title}
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
               {desc}
             </p>
           </div>
         ))}
       </div>
 
-      <p className="text-[11px] text-slate-400 dark:text-slate-600 flex items-center gap-1.5">
+      <p className="text-[11px] text-stone-400 dark:text-stone-600 flex items-center gap-1.5">
         <GitMerge className="w-3 h-3" />
         ゲストのデータはこの端末のセッションが有効な間だけ保持されます（24時間で自動削除）。
       </p>

@@ -72,10 +72,10 @@ export default function BoardHeader({
           <ListChecks className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900 dark:text-white">
             Kanban Dashboard
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+          <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 font-medium mt-0.5">
             タスクのカテゴリをAIが自動判定し、重複タスクの検出もできます。
           </p>
         </div>
@@ -110,15 +110,15 @@ export default function BoardHeader({
           )}
         </button>
 
-        <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-1.5 pl-2 border-l border-stone-200 dark:border-stone-800">
           {/* 今どのアカウントでログイン中か常に見えるようにする。ゲストは名前を持たないため
               固定ラベルにし、正式ユーザーはアバター（無ければ頭文字）+ 名前かメールを表示する。 */}
           {isGuest ? (
-            <span className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">
+            <span className="px-2.5 py-1.5 rounded-full text-xs font-semibold text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-800">
               ゲスト利用中
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-stone-600 dark:text-stone-300">
               {userImage ? (
                 <img
                   src={userImage}
@@ -158,7 +158,7 @@ export default function BoardHeader({
               aria-label="ログアウト"
               title="ログアウト"
             >
-              <LogOut className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+              <LogOut className="w-5 h-5 text-stone-600 dark:text-stone-300" />
             </button>
           )}
         </div>

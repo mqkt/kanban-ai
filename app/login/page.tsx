@@ -44,17 +44,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="panel-card w-full max-w-md p-6 sm:p-8">
         <Link
           href="/"
-          className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-stone-500 transition-colors hover:text-stone-900 dark:text-stone-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           戻る
         </Link>
 
         <div className="mb-7">
-          <h1 className="text-2xl font-black tracking-normal text-slate-950 dark:text-white">
+          <h1 className="text-2xl font-black tracking-normal text-stone-950 dark:text-white">
             ログイン
           </h1>
-          <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+          <p className="mt-2 text-sm font-medium leading-6 text-stone-500 dark:text-stone-400">
             {session?.user.isGuest
               ? "Googleアカウントに切り替えると新しいアカウントとして開始します。現在のゲストのタスクは引き継がれません。"
               : "Googleアカウントでログイン、またはゲストとしてすぐに試せます。"}
@@ -86,10 +86,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             セッションが全く無い（直接 /login に来た）場合にのみ表示する。 */}
         {!session && (
           <>
-            <div className="my-5 flex items-center gap-3 text-xs font-bold text-slate-400">
-              <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+            <div className="my-5 flex items-center gap-3 text-xs font-bold text-stone-400">
+              <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
               またはアカウントなしで
-              <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+              <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
             </div>
 
             <form action={startGuestSession.bind(null, callbackUrl)}>
@@ -101,7 +101,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 ゲストで試す
               </button>
             </form>
-            <p className="mt-3 text-center text-xs font-medium text-slate-400">
+            <p className="mt-3 text-center text-xs font-medium text-stone-400">
               ログイン不要ですぐに使い始められます。
             </p>
           </>
