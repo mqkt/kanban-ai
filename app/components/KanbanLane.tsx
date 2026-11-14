@@ -32,7 +32,6 @@ function isLeavingLane(e: React.DragEvent): boolean {
   return e.clientX < rect.left || e.clientX >= rect.right || e.clientY < rect.top || e.clientY >= rect.bottom;
 }
 
-// 完了は終わった仕事なので、既定では畳んで件数だけ見せる。ドラッグ中は開く。
 export default function KanbanLane({
   lane,
   tasks,
@@ -50,8 +49,7 @@ export default function KanbanLane({
   onDragEnd,
   onClearCompleted,
 }: KanbanLaneProps) {
-  const collapsible = lane.id === "DONE";
-  const [collapsed, setCollapsed] = useState(true);
+  const isDone = lane.id === "DONE";
   const [confirmingClear, setConfirmingClear] = useState(false);
   // ドラッグ中の挿入位置。string = そのカードの手前、null = 末尾、undefined = 表示なし。
   const [insertBefore, setInsertBefore] = useState<string | null | undefined>(undefined);
@@ -60,9 +58,9 @@ export default function KanbanLane({
   const slot = dragging ? (
     <div
       aria-hidden="true"
-      // 完了の台帳は細い行なので枠も細く。作業中の列は、動かすカードの高さ（最低でも少し高く）にそろえる。
-      style={{ height: collapsible ? 40 : Math.max(dragging.height, 120) }}
-      className="border-2 border-dashed border-ink bg-accent-soft"
+      // 動かすカードの高さにそろえる（低すぎると場所が分かりにくいので最低でも少し高く）。
+      style={{ height: Math.max(dragging.height, 120) }}
+      className="border-2 border-dashed border-ink bg-paper-2"
     />
   ) : (
     <div aria-hidden="true" className="h-1 bg-ink" />
@@ -79,7 +77,6 @@ export default function KanbanLane({
     }
     return null;
   };
-  const open = !collapsible || !collapsed || isDraggedOver || tasks.length === 0;
 
   return (
     <section
@@ -107,85 +104,67 @@ export default function KanbanLane({
       >
         <span className="font-display text-2xl font-bold leading-none">{lane.title}</span>
         <span className="num text-sm font-normal text-muted">{tasks.length}件</span>
-        {collapsible && tasks.length > 0 && (
-          <span className="ml-auto flex items-center gap-4 self-center">
-            {open && onClearCompleted && !confirmingClear && (
-              <button
-                type="button"
-                onClick={() => setConfirmingClear(true)}
-                className="link-quiet text-sm font-normal text-error"
-              >
-                完了をすべて削除
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setCollapsed((v) => !v)}
-              className="key min-h-9 px-3 text-sm font-normal"
-              aria-expanded={open}
-            >
-              {open ? "閉じる" : "開く"}
-            </button>
-          </span>
-        )}
       </h2>
 
-      {collapsible && open && tasks.length > 0 && onClearCompleted && confirmingClear && (
+      {isDone && tasks.length > 0 && onClearCompleted && (
         <div className="mt-2">
-          <InlineConfirm
-            message="完了をすべて削除しますか？"
-            confirmLabel="削除する"
-            onConfirm={() => {
-              onClearCompleted();
-              setConfirmingClear(false);
-            }}
-            onCancel={() => setConfirmingClear(false)}
-          />
-        </div>
-      )}
-
-      {open && (
-        <div className={collapsible ? "mt-2 flex flex-col" : "mt-3 flex flex-col gap-3"}>
-          {tasks.length === 0 ? (
-            isDraggedOver && dragging ? (
-              slot
-            ) : (
-            <p className={collapsible ? "border-b border-rule py-2 text-sm text-muted" : "border border-ink/30 px-3 py-6 text-sm text-muted"}>{lane.title}のタスクはありません</p>
-            )
+          {confirmingClear ? (
+            <InlineConfirm
+              message="完了をすべて削除しますか？"
+              confirmLabel="削除する"
+              onConfirm={() => {
+                onClearCompleted();
+                setConfirmingClear(false);
+              }}
+              onCancel={() => setConfirmingClear(false)}
+            />
           ) : (
-            <>
-              {tasks.map((task, index) => (
-                <div
-                  key={task.id}
-                  // ドラッグ中の元のカードは、残像を残さず、高さごと畳む。
-                  className={`flex flex-col ${collapsible ? "" : "gap-3"} ${
-                    dragging?.id === task.id ? `pointer-events-none h-0 overflow-hidden opacity-0 ${collapsible ? "" : "-mb-3"}` : ""
-                  }`}
-                >
-                  {isDraggedOver && insertBefore === task.id && slot}
-                  <TaskCard
-                    task={task}
-                    deleteTask={deleteTask}
-                    updateTaskStatus={updateTaskStatus}
-                    updateTaskCategory={updateTaskCategory}
-                    editTaskTitle={editTaskTitle}
-                    onDragStart={onDragStart}
-                    onDragEnd={onDragEnd}
-                    compact={collapsible}
-                    onMoveUp={index > 0 ? () => onPlace(task.id, lane.id, tasks[index - 1].id) : undefined}
-                    onMoveDown={
-                      index < tasks.length - 1
-                        ? () => onPlace(task.id, lane.id, tasks[index + 2]?.id ?? null)
-                        : undefined
-                    }
-                  />
-                </div>
-              ))}
-              {isDraggedOver && insertBefore === null && slot}
-            </>
+            <button type="button" onClick={() => setConfirmingClear(true)} className="link-quiet text-sm text-error">
+              完了をすべて削除
+            </button>
           )}
         </div>
       )}
+
+      <div className="mt-3 flex flex-col gap-3">
+        {tasks.length === 0 ? (
+          isDraggedOver && dragging ? (
+            slot
+          ) : (
+          <p className="border border-ink/30 px-3 py-6 text-sm text-muted">{lane.title}のタスクはありません</p>
+          )
+        ) : (
+          <>
+            {tasks.map((task, index) => (
+              <div
+                key={task.id}
+                // ドラッグ中の元のカードは、残像を残さず、高さごと畳む。
+                className={`flex flex-col gap-3 ${
+                  dragging?.id === task.id ? "pointer-events-none -mb-3 h-0 overflow-hidden opacity-0" : ""
+                }`}
+              >
+                {isDraggedOver && insertBefore === task.id && slot}
+                <TaskCard
+                  task={task}
+                  deleteTask={deleteTask}
+                  updateTaskStatus={updateTaskStatus}
+                  updateTaskCategory={updateTaskCategory}
+                  editTaskTitle={editTaskTitle}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                  onMoveUp={index > 0 ? () => onPlace(task.id, lane.id, tasks[index - 1].id) : undefined}
+                  onMoveDown={
+                    index < tasks.length - 1
+                      ? () => onPlace(task.id, lane.id, tasks[index + 2]?.id ?? null)
+                      : undefined
+                  }
+                />
+              </div>
+            ))}
+            {isDraggedOver && insertBefore === null && slot}
+          </>
+        )}
+      </div>
     </section>
   );
 }

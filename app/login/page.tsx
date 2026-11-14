@@ -41,51 +41,63 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="min-h-screen bg-paper text-ink">
       <SiteBar />
-      <div className="mx-auto w-full max-w-[var(--container)] px-[var(--gutter)] pt-12 pb-24">
-        <Link href="/" className="link-quiet text-sm">
+      <div className="mx-auto w-full max-w-[var(--container)] px-[var(--gutter)] pt-8 pb-24">
+        <Link href="/" className="link-quiet -ml-1 inline-flex min-h-11 items-center px-1 text-base">
           戻る
         </Link>
 
-        {/* ログインはテーマの「申込カード」: 白いプレートに黒の太い罫線とずらした影。 */}
-        <div className="mt-8 w-full max-w-md border-2 border-ink bg-plate p-8 shadow-card">
-        <h1 className="jp-text text-3xl">ログイン</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">
-          {session?.user.isGuest
-            ? "Googleでログインすると新しいアカウントになります。今のゲストのタスクは引き継がれません。"
-            : "Googleでログインするか、ゲストですぐに試せます。"}
-        </p>
+        {/* 見出しを画面の主役にする: 大きな表示サイズ、その下に墨の太い罫線を一本引き、
+            罫線の下に「説明」と「操作」を並べる。操作を囲む箱は作らない（ボタン自身が
+            黒の塊とずらした影を持つので、枠でもう一度囲む必要がない）。 */}
+        <h1 className="jp-text mt-6 text-5xl leading-none sm:text-7xl">ログイン</h1>
+        <div className="mt-10 border-t-2 border-ink pt-10 grid items-start gap-10 lg:grid-cols-2 lg:gap-x-[var(--gap-columns)]">
+          <div>
+            <p className={`max-w-md leading-7 ${session?.user.isGuest ? "text-lg font-medium text-ink" : "text-base text-muted"}`}>
+              {session?.user.isGuest
+                ? "Googleでログインすると新しいアカウントになります。今のゲストのタスクは引き継がれません。"
+                : "Googleでログインするか、ゲストですぐに試せます。"}
+            </p>
+            {/* 個人情報を渡す入口なので、ログインの前にプライバシーポリシーを読めるようにする。 */}
+            <p className="mt-6 text-sm text-muted">
+              ログインすると、
+              <Link href="/privacy" className="font-medium text-ink hover:text-accent">
+                プライバシーポリシー
+              </Link>
+              に沿って情報を扱います。
+            </p>
+          </div>
 
-        <form
-          className="mt-8"
-          action={async () => {
-            "use server";
-            // ゲストのセッションCookieを残したままGoogle認証を開始すると、Auth.jsは
-            // 「新規サインイン」ではなく「今ログイン中のユーザーにGoogleアカウントを
-            // 連携する」操作だと解釈する。その結果Googleアカウントがゲストの使い捨て
-            // ユーザー行に紐付いてしまい、以後そのGoogleアカウントは別セッションから
-            // 二度とサインインに使えなくなる（OAuthAccountNotLinkedで恒久的に詰む）。
-            // signIn前に必ずセッションを破棄し、常に「新規サインイン」として扱わせる。
-            await signOut({ redirect: false });
-            await signIn("google", { redirectTo: callbackUrl });
-          }}
-        >
-          <button type="submit" className="key-primary w-full">
-            <GoogleIcon />
-            Googleで続ける
-          </button>
-        </form>
-
-        {/* ゲストは`/`訪問時に自動発行済みなので、既にゲストセッション中の相手に
-            このボタンを見せる意味はない。それどころか押すと signIn("guest") が
-            新しい使い捨てアカウントを発行し直し、今のタスクを失わせてしまう。
-            セッションが全く無い（直接 /login に来た）場合にのみ表示する。 */}
-        {!session && (
-          <form className="mt-3" action={startGuestSession.bind(null, callbackUrl)}>
-            <button type="submit" className="key min-h-12 w-full">
-              ゲストで試す
-            </button>
-          </form>
-        )}
+          <div className="w-full max-w-md">
+            <form
+              action={async () => {
+                "use server";
+                // ゲストのセッションCookieを残したままGoogle認証を開始すると、Auth.jsは
+                // 「新規サインイン」ではなく「今ログイン中のユーザーにGoogleアカウントを
+                // 連携する」操作だと解釈する。その結果Googleアカウントがゲストの使い捨て
+                // ユーザー行に紐付いてしまい、以後そのGoogleアカウントは別セッションから
+                // 二度とサインインに使えなくなる（OAuthAccountNotLinkedで恒久的に詰む）。
+                // signIn前に必ずセッションを破棄し、常に「新規サインイン」として扱わせる。
+                await signOut({ redirect: false });
+                await signIn("google", { redirectTo: callbackUrl });
+              }}
+            >
+              <button type="submit" className="key-primary min-h-14 w-full shadow-card">
+                <GoogleIcon />
+                Googleで続ける
+              </button>
+            </form>
+            {/* ゲストは`/`訪問時に自動発行済みなので、既にゲストセッション中の相手に
+                このボタンを見せる意味はない。それどころか押すと signIn("guest") が
+                新しい使い捨てアカウントを発行し直し、今のタスクを失わせてしまう。
+                セッションが全く無い（直接 /login に来た）場合にのみ表示する。 */}
+            {!session && (
+              <form className="mt-5" action={startGuestSession.bind(null, callbackUrl)}>
+                <button type="submit" className="key min-h-14 w-full">
+                  ゲストで試す
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </main>
