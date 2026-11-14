@@ -8,9 +8,6 @@ export default function AboutSection() {
           <Link href="/privacy" className="hover:text-ink">
             プライバシーポリシー
           </Link>
-          <Link href="/terms" className="hover:text-ink">
-            利用規約
-          </Link>
         </nav>
       </div>
     </footer>

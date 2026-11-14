@@ -1,7 +1,7 @@
 import Link from "next/link";
 import SiteBar from "./SiteBar";
 
-// プライバシーポリシー・利用規約で共通のページ枠。
+// プライバシーポリシーのページ枠。
 export default function LegalPage({
   title,
   updated,
