@@ -55,7 +55,7 @@ export default function CategoryMenu({
         aria-expanded={open}
         aria-label="カテゴリを変更"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex cursor-pointer items-center gap-1 font-medium text-ink hover:text-muted [@media(hover:none)]:min-h-11"
+        className="-my-1 inline-flex min-h-8 cursor-pointer items-center gap-1 font-medium text-ink hover:text-muted [@media(hover:none)]:min-h-11"
       >
         {value ?? "未分類"}
         <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -65,7 +65,7 @@ export default function CategoryMenu({
       {open && (
         <ul
           role="listbox"
-          className="absolute left-0 top-full z-[var(--z-dropdown)] mt-1 min-w-28 border-2 border-ink bg-plate text-sm shadow-card"
+          className="absolute left-0 top-full z-[var(--z-dropdown)] mt-1 min-w-28 border-2 border-ink bg-plate text-sm"
         >
           {items.map((item) => (
             <li key={item.label} role="presentation">

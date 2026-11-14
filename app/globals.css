@@ -2,6 +2,14 @@
  * nav: top rule bar, wordmark left, account controls right · signature: the plate, a white card ruled in ink over a hard offset (the same on every card) · states: loading, empty, error, full · terrazzo: off-white
  * axes: light/geometric-sans/warm · posture: restrained · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P3 H4 E4 S4 R4 V3 · weakest: P, the idea is a restrained ink-and-offset ledger with no argument a reader could disagree with; the signature is now the ink-offset plate on what is in progress
+ * Hallmark · recomposed 2026-11-14 · the 完了 ledger spans the board and each row lines up with the three lane columns above (title, category, time and ⋯ on lg); /login, 404, error and /privacy share the wordmark's left edge, with a plate on /login and a display numeral on 404 · checked: sloplint 0, kept 56/56
+ * Hallmark · polish 2026-11-14 · review (5 findings): 4 fixed (2 category trigger gets a 32px mouse hit area without growing the row; 3 the 完了 ledger is exactly two lanes plus the gap wide on lg, its right edge lines up with 進行中 at 821px; 4 jp-text on the 404, error, login and legal headings so they break by phrase; 5 empty-lane boxes use border-ink/30, hairlines stay quiet) · 1 measured and dismissed (1 no horizontal overflow at 390: scrollWidth 390, overflow-x clip) · structural, left to the owner: ledger companion to the right of it, /login and /404 filling only the top of the screen · confirming review: not run
+ * Hallmark · 2026-11-14 · the lane strip (phone counts and jump links, desktop 完了 link) was removed at the owner's request; the 3-lane grid, the 完了 ledger and the bottom drop bar stay
+ * Hallmark · redesign full · 3rd pass 2026-11-14 · recomposed: the three working lanes in a 3-column grid; 完了 is a full-width ruled ledger of compact rows (compact TaskCard) capped at max-w-3xl; a lane strip with counts, sticky on a phone and a single 完了 jump link on a wide screen; a bottom drop bar for 完了 while dragging · finish-review: subagent · 6 findings · 4 resolved (1 drop bar, 3 desktop 完了 link, 4 ledger width, 5 delete-all moved into the head) · 1 verified not an issue (2 anchor offset: lane top 96px vs strip bottom 61px) · 1 declined (6 category control already 44px on touch) · kept: links 6/6, fields 1/1, handlers 56/56 · not seen: 768 and 1440 widths, real touch
+ * Hallmark · polish 2026-11-14 · audit review (8 findings): 4 fixed (1 Japanese line breaking via jp-text: overflow-wrap anywhere, line-break strict, word-break auto-phrase, text-wrap pretty; 2 ⋯ menu flips upward near the viewport edge, caps its height, drops its own offset shadow; 3 divider above delete and the natural step in medium weight; 4 drag shows one signal, the slot, no lane tint) · 1 measured and dismissed (6 placeholders: 7:1 light, 6.7:1 dark, opacity 1) · 3 declined (5 phone length and 7 slim done lane are composition; 8 card hover offset signals draggable) · confirming review: not run
+ * Hallmark · 2026-11-14 · drag jitter fixed: a dragleave between elements inside a lane no longer clears the drop slot (it made the slot vanish and reappear, shifting the cards below by the slot height); only a real exit from the lane does · covered by a test that fails without the guard
+ * Hallmark · 2026-11-14 · card actions: every action lives in one ⋯ ActionMenu on the title row (the natural next step first: TODO→進行中へ, IN_PROGRESS→完了にする, PENDING→進行中へ; then the other lanes, edit, up, down, delete) replacing six text links; the card shows only the title and the category · verified by hand: menu opens, items listed, Escape closes
+ * Hallmark · 2026-11-14 · drag reorder: the dragged card collapses at its origin and a dashed slot of the same height shows where it lands (replaces the dimmed ghost plus a thin line) · verified by hand with dispatched drag events: slot between cards, slot in an empty lane, drop, cancel
  * Hallmark · 2026-11-14 · the in-progress plate no longer holds the ink offset (it read as a stuck hover); every card is the same plate, the signature is the plate itself
  * Hallmark · follow-up 2026-11-14 · in-lane reorder (drag with an insert line, 上へ/下へ buttons), Task.position, planReorder · verified by hand: buttons, drag events within a lane and across lanes, order kept after reload
  * Hallmark · follow-up 2026-11-14 · undoable delete, title search, same-title notice, in-site category menu (CategoryMenu), native tooltips removed, Done toggle as a key · verified by hand in the browser: undo, merge suggestion, stale tag, dark, category menu, drag events · not verified: loading and error screens
@@ -10,6 +18,7 @@
 /* Hallmark · dropped onCancel={() => setConfirmingDelete(false)}, onClick={() => setConfirmingDelete(true)}, onConfirm={() => deleteTask(task.id)}, onChange={(e) => updateTaskCategory(task.id, e., onClick={(e) => e.stopPropagation()}, onSubmit={addTask} · single delete now undoable instead of confirmed; the native category select became CategoryMenu; the add form goes through handleAdd (same-title notice then addTask); the actions still exist */
 /* Hallmark · dropped /terms · the terms page was removed on purpose, the privacy policy stays (the terms were a disclaimer the screen already states) */
 /* Hallmark · dropped onDragLeave={onDragLeave}, onDragOver={(e) => onDragOver(e, lane.id)}, onDrop={(e) => onDrop(e, lane.id)} · the lane drag handlers now also track the insert position for reordering; the same three events are still handled */
+/* Hallmark · dropped onClick={() => updateTaskStatus(task.id, previo, onClick={handleStartEdit} · the card now shows only the next-lane link and a ⋯ menu; edit and move-back moved into ActionMenu and are still reachable (menu items call the same functions) */
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./base.css" layer(base);
@@ -48,6 +57,15 @@ button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: no
 }
 
 /* コードや日付や日数は等幅で、表のように揃える。 */
+/* 日本語の長い文。行頭に「ー」や句読点が来ず、最後の行に1文字だけ残らないように折り返す。
+   auto-phrase 非対応のブラウザでは、無視されて anywhere だけが効く。 */
+@utility jp-text {
+  overflow-wrap: anywhere;
+  line-break: strict;
+  word-break: auto-phrase;
+  text-wrap: pretty;
+}
+
 @utility num {
   font-family: var(--font-outlier);
   font-weight: 500;

@@ -69,7 +69,7 @@ export function DuplicateResults({
           <p className="text-sm text-muted">似たタスクが見つかりました</p>
           <ul className="mt-2 flex flex-col text-base font-medium">
             {suggestion.taskIds.map((taskId) => (
-              <li key={taskId} className="break-all border-b border-rule py-2">
+              <li key={taskId} className="jp-text border-b border-rule py-2">
                 {titleFor(taskId)}
               </li>
             ))}
@@ -78,7 +78,7 @@ export function DuplicateResults({
 
           <div className="mt-4 border-t-2 border-ink pt-3">
             <p className="text-sm text-muted">まとめると、{suggestion.taskIds.length}件が1件になります</p>
-            <p className="mt-1 break-all text-lg font-medium">「{suggestion.suggestedTitle}」</p>
+            <p className="jp-text mt-1 text-lg font-medium">「{suggestion.suggestedTitle}」</p>
           </div>
 
           <div className="mt-4 flex gap-2">

@@ -300,21 +300,22 @@ export function useKanban() {
     }
   };
 
+  // ドラッグ中のカード。元の場所では畳み、入る場所に同じ高さの空き枠を出すために、高さも持つ。
+  const [dragging, setDragging] = useState<{ id: string; height: number } | null>(null);
+
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedTaskId(id);
     e.dataTransfer.setData("text/plain", id);
 
-    setTimeout(() => {
-      const element = document.getElementById(`card-${id}`);
-      if (element) element.style.opacity = "0.4";
-    }, 0);
+    const height = e.currentTarget.getBoundingClientRect().height;
+    // ブラウザがドラッグ画像を撮ったあとに畳む（同じ処理の中で畳むとドラッグが中断されるため）。
+    setTimeout(() => setDragging({ id, height }), 0);
   };
 
-  const handleDragEnd = (e: React.DragEvent, id: string) => {
+  const handleDragEnd = () => {
     setDraggedTaskId(null);
     setDraggedOverLane(null);
-    const element = document.getElementById(`card-${id}`);
-    if (element) element.style.opacity = "1";
+    setDragging(null);
   };
 
   const handleDragOverLane = (e: React.DragEvent, laneId: TaskStatus) => {
@@ -348,6 +349,7 @@ export function useKanban() {
     }
     setDraggedTaskId(null);
     setDraggedOverLane(null);
+    setDragging(null);
   };
 
   const toggleDarkMode = () => {
@@ -361,6 +363,7 @@ export function useKanban() {
     isLoading,
     loadError,
     draggedOverLane,
+    dragging,
     addTask,
     deleteTask,
     undoDelete,
