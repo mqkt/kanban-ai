@@ -188,9 +188,7 @@ export default function TaskCard({
       draggable={!isEditing}
       onDragStart={(e) => onDragStart(e, task.id)}
       onDragEnd={(e) => onDragEnd(e, task.id)}
-      className={`group cursor-grab border-2 border-ink bg-plate transition-shadow duration-[var(--dur-micro)] hover:shadow-card-hover active:cursor-grabbing ${
-        task.status === "IN_PROGRESS" ? "shadow-card-hover" : "shadow-card"
-      }`}
+      className={`group cursor-grab border-2 border-ink bg-plate transition-shadow duration-[var(--dur-micro)] hover:shadow-card-hover active:cursor-grabbing shadow-card`}
     >
       {isEditing ? (
         editor
