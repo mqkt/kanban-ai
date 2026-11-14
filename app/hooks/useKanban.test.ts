@@ -133,4 +133,59 @@ describe("useKanban", () => {
 
     vi.unstubAllGlobals();
   });
+
+  describe("undoable delete", () => {
+    const setup = async () => {
+      const task = makeTask("del-1", "TODO");
+      const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return Promise.resolve({ ok: true, json: async () => ({ ok: true }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ tasks: [task], nextCursor: null }) });
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      const hook = renderHook(() => useKanban());
+      await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+      return { hook, fetchMock };
+    };
+    const deleteCalls = (fetchMock: ReturnType<typeof vi.fn>) =>
+      fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "DELETE");
+
+    it("hides the task at once but sends no DELETE until the grace period ends", async () => {
+      const { hook, fetchMock } = await setup();
+      vi.useFakeTimers();
+
+      act(() => hook.result.current.deleteTask("del-1"));
+
+      expect(hook.result.current.tasks).toHaveLength(0);
+      expect(hook.result.current.pendingDelete?.id).toBe("del-1");
+      expect(deleteCalls(fetchMock)).toHaveLength(0);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(deleteCalls(fetchMock)).toHaveLength(1);
+      expect(hook.result.current.pendingDelete).toBeNull();
+
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("restores the task and never sends DELETE when undone in time", async () => {
+      const { hook, fetchMock } = await setup();
+      vi.useFakeTimers();
+
+      act(() => hook.result.current.deleteTask("del-1"));
+      act(() => hook.result.current.undoDelete());
+
+      expect(hook.result.current.tasks.map((t) => t.id)).toEqual(["del-1"]);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10000);
+      });
+      expect(deleteCalls(fetchMock)).toHaveLength(0);
+
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+  });
 });

@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useKanban } from "../hooks/useKanban";
 import { useDuplicates } from "../hooks/useDuplicates";
-import { LaneConfig } from "../types/kanban";
-import { Clock, Layers, CheckCircle, Hourglass, Filter, X } from "lucide-react";
+import { LaneConfig, TaskStatus, TASK_STATUS_LABELS, TASK_STATUS_ORDER } from "../types/kanban";
 import BoardHeader from "./BoardHeader";
 import TaskForm from "./TaskForm";
 import KanbanLane from "./KanbanLane";
-import DuplicatePanel from "./DuplicatePanel";
+import { DuplicateButton, DuplicateResults } from "./DuplicatePanel";
 import AboutSection from "./AboutSection";
+import UndoBar from "./UndoBar";
 
 interface KanbanBoardProps {
   isGuest: boolean;
@@ -27,6 +27,8 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
     draggedOverLane,
     addTask,
     deleteTask,
+    undoDelete,
+    pendingDelete,
     updateTaskStatus,
     updateTaskCategory,
     editTaskTitle,
@@ -39,6 +41,23 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
   const duplicates = useDuplicates();
 
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [sameTitleNotice, setSameTitleNotice] = useState<string | null>(null);
+
+  // 通知は数秒で消す。
+  useEffect(() => {
+    if (!sameTitleNotice) return;
+    const timer = setTimeout(() => setSameTitleNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [sameTitleNotice]);
+
+  // 追加の前に、同じタイトルが既にあれば知らせる（AIは呼ばない。追加自体は止めない）。
+  const normalize = (text: string) => text.replace(/\s+/g, "").toLowerCase();
+  const handleAdd = async (title: string) => {
+    const same = tasks.some((t) => normalize(t.title) === normalize(title));
+    setSameTitleNotice(same ? `「${title.trim()}」と同じタイトルのタスクがあります。` : null);
+    await addTask(title);
+  };
 
   // 実際にタスクで使われているカテゴリだけをフィルタ候補として出す
   // （固定5択を常に出すと、使っていないカテゴリまで表示されて絞り込みの意味が薄れるため）。
@@ -58,147 +77,139 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
     await mergeTasks(keepId, mergeIds, suggestion.suggestedTitle);
   };
 
-  const lanes: LaneConfig[] = [
-    {
-      id: "TODO",
-      title: "未着手",
-      accentClass: "bg-blue-600 dark:bg-blue-500",
-      icon: <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
-    },
-    {
-      id: "IN_PROGRESS",
-      title: "進行中",
-      accentClass: "bg-amber-600 dark:bg-amber-500",
-      icon: <Layers className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
-    },
-    {
-      id: "PENDING",
-      title: "保留",
-      accentClass: "bg-purple-600 dark:bg-purple-500",
-      icon: <Hourglass className="w-5 h-5 text-purple-600 dark:text-purple-400" />,
-    },
-    {
-      id: "DONE",
-      title: "完了",
-      accentClass: "bg-emerald-600 dark:bg-emerald-500",
-      icon: <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
-    },
-  ];
+  const lanes: LaneConfig[] = TASK_STATUS_ORDER.map((id) => ({
+    id,
+    title: TASK_STATUS_LABELS[id],
+  }));
 
   if (!isMounted) return null;
 
-  return (
-    <div className="app-bg min-h-screen w-full p-4 sm:p-6 md:p-8 font-sans">
-      <div className="max-w-7xl mx-auto flex flex-col gap-6 sm:gap-8">
-        <BoardHeader
-          isDarkMode={isDarkMode}
-          toggleDarkMode={toggleDarkMode}
-          hasCompletedTasks={tasks.some((t) => t.status === "DONE")}
-          clearCompletedTasks={clearCompletedTasks}
-          isGuest={isGuest}
-          userName={userName}
-          userImage={userImage}
-        />
+  const laneOf = (id: TaskStatus) => {
+    const lane = lanes.find((l) => l.id === id)!;
+    const laneTasks = tasks.filter(
+      (task) => task.status === id && (!categoryFilter || task.category === categoryFilter) &&
+        (!query.trim() || normalize(task.title).includes(normalize(query)))
+    );
+    return (
+      <KanbanLane
+        key={id}
+        lane={lane}
+        tasks={laneTasks}
+        isDraggedOver={draggedOverLane === id}
+        onDragOver={dragHandlers.handleDragOverLane}
+        onDragLeave={dragHandlers.handleDragLeaveLane}
+        onDrop={dragHandlers.handleDropLane}
+        deleteTask={deleteTask}
+        updateTaskStatus={updateTaskStatus}
+        updateTaskCategory={updateTaskCategory}
+        editTaskTitle={editTaskTitle}
+        onDragStart={dragHandlers.handleDragStart}
+        onDragEnd={dragHandlers.handleDragEnd}
+        onClearCompleted={id === "DONE" ? clearCompletedTasks : undefined}
+      />
+    );
+  };
 
+  return (
+    <div className="min-h-screen bg-paper text-ink">
+      <BoardHeader
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        isGuest={isGuest}
+        userName={userName}
+        userImage={userImage}
+      />
+
+      <main className="mx-auto flex w-full max-w-[var(--container)] flex-col gap-8 px-[var(--gutter)] py-6">
         {loadError && (
-          <div className="panel-card border-red-200/70 dark:border-red-900/40 px-4 py-3 text-sm font-semibold text-red-600 dark:text-red-400">
+          <p role="alert" className="border-2 border-error bg-plate px-4 py-3 text-sm text-error">
             {loadError}
-          </div>
+          </p>
         )}
 
-        {/* タスク追加とAI重複チェックは、どちらも「ボードを操作する前段のツール」として
-            1枚のカードにまとめている。別々のカードに分けるとボード本体（本来の主役）に
-            たどり着くまでのスクロール量が増えるため、SaaS的なツールバーに近い密度に寄せた。 */}
-        <section className="panel-card p-4 flex flex-col gap-4">
-          <TaskForm onSubmit={addTask} isLoading={isLoading} />
+        <section className="flex flex-col gap-3">
+          <TaskForm onSubmit={handleAdd} isLoading={isLoading} />
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+            <p className="text-sm text-muted">追加するとAIがカテゴリを付けます。</p>
+            {!isLoading && <DuplicateButton isRunning={duplicates.isRunning} onRun={duplicates.runDuplicateCheck} />}
+          </div>
+          {sameTitleNotice && (
+            <p role="status" className="text-sm">
+              {sameTitleNotice}
+            </p>
+          )}
 
-          {!isLoading && (
-            <div className="border-t border-stone-200/60 dark:border-stone-800/60 pt-4">
-              <DuplicatePanel
-                tasks={tasks}
-                suggestions={duplicates.suggestions}
-                isRunning={duplicates.isRunning}
-                error={duplicates.error}
-                hasRun={duplicates.hasRun}
-                onRun={duplicates.runDuplicateCheck}
-                onDismiss={duplicates.dismissSuggestion}
-                onMerge={handleMergeSuggestion}
+          {!isLoading && tasks.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-rule pt-3 text-sm">
+              {availableCategories.length > 0 && <span className="mr-1 text-muted">カテゴリ</span>}
+              {availableCategories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  aria-pressed={categoryFilter === category}
+                  onClick={() => setCategoryFilter((prev) => (prev === category ? null : category))}
+                  className={`min-h-8 cursor-pointer border px-3 font-medium transition-colors duration-[var(--dur-micro)] [@media(hover:none)]:min-h-11 ${
+                    categoryFilter === category
+                      ? "border-accent bg-accent-soft text-ink"
+                      : "border-ink bg-plate hover:bg-paper-2"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+              {categoryFilter && (
+                <button type="button" onClick={() => setCategoryFilter(null)} className="link-quiet px-1">
+                  解除
+                </button>
+              )}
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="検索"
+                aria-label="タスクを検索"
+                className="ml-auto min-h-9 w-full border border-ink bg-plate px-3 text-sm outline-none placeholder:text-muted focus:ring-2 focus:ring-focus sm:w-56"
               />
             </div>
           )}
+
+          {!isLoading && (
+            <DuplicateResults
+              tasks={tasks}
+              suggestions={duplicates.suggestions}
+              isRunning={duplicates.isRunning}
+              error={duplicates.error}
+              hasRun={duplicates.hasRun}
+              pendingOverwrite={duplicates.pendingOverwrite}
+              onConfirmRerun={duplicates.confirmRerun}
+              onCancelRerun={duplicates.cancelRerun}
+              onDismiss={duplicates.dismissSuggestion}
+              onMerge={handleMergeSuggestion}
+            />
+          )}
         </section>
 
-        {!isLoading && availableCategories.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 px-1">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-500 dark:text-stone-400">
-              <Filter className="w-3.5 h-3.5" />
-              カテゴリで絞り込み
-            </span>
-            {availableCategories.map((category) => (
-              <button
-                key={category}
-                type="button"
-                onClick={() =>
-                  setCategoryFilter((prev) => (prev === category ? null : category))
-                }
-                className={`text-xs font-bold px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
-                  categoryFilter === category
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "border-stone-200 dark:border-stone-800 text-stone-500 dark:text-stone-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
-                }`}
-              >
-                {category}
-              </button>
+        {isLoading ? (
+          <div aria-busy="true" className="grid gap-[var(--gap-columns)] md:grid-cols-2 xl:grid-cols-4">
+            <p className="sr-only">読み込み中…</p>
+            {lanes.map((lane) => (
+              <div key={lane.id} aria-hidden="true" className="flex flex-col gap-3">
+                <div className="h-6 w-24 animate-pulse rounded-pill bg-paper-3" />
+                <div className="h-20 animate-pulse rounded-card bg-paper-3" />
+                <div className="h-20 animate-pulse rounded-card bg-paper-3" />
+              </div>
             ))}
-            {categoryFilter && (
-              <button
-                type="button"
-                onClick={() => setCategoryFilter(null)}
-                className="inline-flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-                クリア
-              </button>
-            )}
+          </div>
+        ) : (
+          <div className="grid items-start gap-x-[var(--gap-columns)] gap-y-8 md:grid-cols-2 lg:grid-cols-4">
+            {lanes.map((lane) => laneOf(lane.id))}
           </div>
         )}
+      </main>
 
-        {isLoading ? (
-          <main className="panel-card p-8 text-center text-sm font-semibold text-stone-500 dark:text-stone-400">
-            タスクを読み込んでいます...
-          </main>
-        ) : (
-          <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
-            {lanes.map((lane) => {
-              const laneTasks = tasks.filter(
-                (task) =>
-                  task.status === lane.id &&
-                  (!categoryFilter || task.category === categoryFilter)
-              );
+      {pendingDelete && <UndoBar title={pendingDelete.title} onUndo={undoDelete} />}
 
-              return (
-                <KanbanLane
-                  key={lane.id}
-                  lane={lane}
-                  tasks={laneTasks}
-                  isDraggedOver={draggedOverLane === lane.id}
-                  onDragOver={dragHandlers.handleDragOverLane}
-                  onDragLeave={dragHandlers.handleDragLeaveLane}
-                  onDrop={dragHandlers.handleDropLane}
-                  deleteTask={deleteTask}
-                  updateTaskStatus={updateTaskStatus}
-                  updateTaskCategory={updateTaskCategory}
-                  editTaskTitle={editTaskTitle}
-                  onDragStart={dragHandlers.handleDragStart}
-                  onDragEnd={dragHandlers.handleDragEnd}
-                />
-              );
-            })}
-          </main>
-        )}
-
-        <AboutSection />
-      </div>
+      <AboutSection />
     </div>
   );
 }

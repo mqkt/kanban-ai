@@ -4,8 +4,8 @@ import { TaskStatus } from "@prisma/client";
 export const taskTitleSchema = z
   .string()
   .trim()
-  .min(1, "タイトルは必須です")
-  .max(200, "タイトルは200文字以内で入力してください");
+  .min(1, "入力してください")
+  .max(200, "200文字以内にしてください");
 
 export const taskStatusSchema = z.nativeEnum(TaskStatus);
 

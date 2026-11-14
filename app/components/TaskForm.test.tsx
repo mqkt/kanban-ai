@@ -9,9 +9,9 @@ describe("TaskForm", () => {
     const onSubmit = vi.fn();
     render(<TaskForm onSubmit={onSubmit} />);
 
-    await user.click(screen.getByRole("button", { name: "タスクを追加" }));
+    await user.click(screen.getByRole("button", { name: "追加" }));
 
-    expect(await screen.findByText("タイトルは必須です")).toBeInTheDocument();
+    expect(await screen.findByText("入力してください")).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -20,9 +20,9 @@ describe("TaskForm", () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<TaskForm onSubmit={onSubmit} />);
 
-    const input = screen.getByPlaceholderText("新しいタスクを入力...");
+    const input = screen.getByPlaceholderText("やることを入力");
     await user.type(input, "  資料作成  ");
-    await user.click(screen.getByRole("button", { name: "タスクを追加" }));
+    await user.click(screen.getByRole("button", { name: "追加" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("資料作成"));
     await waitFor(() => expect(input).toHaveValue(""));
@@ -33,9 +33,9 @@ describe("TaskForm", () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("failed"));
     render(<TaskForm onSubmit={onSubmit} />);
 
-    const input = screen.getByPlaceholderText("新しいタスクを入力...");
+    const input = screen.getByPlaceholderText("やることを入力");
     await user.type(input, "資料作成");
-    await user.click(screen.getByRole("button", { name: "タスクを追加" }));
+    await user.click(screen.getByRole("button", { name: "追加" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     expect(input).toHaveValue("資料作成");

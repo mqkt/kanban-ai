@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         });
         if (reserved.count === 0) {
           return NextResponse.json(
-            { error: "ゲストでのAI自動分類は上限に達しました。" },
+            { error: "ゲストのAI分類は上限に達しました。" },
             { status: 429 }
           );
         }
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       // 1日あたりの資源自体も保護する（詳細はlib/geminiBudget.ts参照）。
       if (!reserveGeminiCall(CLASSIFY_MODEL)) {
         return NextResponse.json(
-          { error: "本日のAI自動分類の利用上限に達しました。しばらくしてから再度お試しください。" },
+          { error: "今日のAI分類の上限に達しました。しばらくしてからもう一度試してください。" },
           { status: 429 }
         );
       }
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
           issues: validated.error.issues,
         });
         return NextResponse.json(
-          { error: "AI分類の結果が不正な形式でした。もう一度お試しください。" },
+          { error: "AI分類の結果が不正な形式でした。もう一度試してください。" },
           { status: 502 }
         );
       }
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(
-      { error: "タスクの自動分類に失敗しました。しばらくしてから再度お試しください。" },
+      { error: "分類に失敗しました。しばらくしてからもう一度試してください。" },
       { status: 500 }
     );
   }

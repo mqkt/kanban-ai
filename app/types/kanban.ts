@@ -55,8 +55,6 @@ export interface Task {
 
 // 3. かんばんボードの各レーン（列）の表示設定を管理する構造定義
 export interface LaneConfig {
-  id: TaskStatus;       // どのステータスに対応するレーンか
-  title: string;        // レーンのタイトル（画面表示用）
-  accentClass: string;  // タスク数バッジなどのアクセント背景色を指定するTailwindクラス
-  icon: React.ReactNode;// レーンヘッダーに表示するLucideアイコンコンポーネント
+  id: TaskStatus; // どのステータスに対応するレーンか
+  title: string;  // レーンのタイトル（画面表示用）
 }

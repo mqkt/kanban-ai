@@ -51,7 +51,7 @@ export async function POST() {
       });
       if (reserved.count === 0) {
         return NextResponse.json(
-          { error: "ゲストでのAI機能利用は上限に達しました。" },
+          { error: "ゲストのAI機能は上限に達しました。" },
           { status: 429 }
         );
       }
@@ -61,7 +61,7 @@ export async function POST() {
     // 1日あたりの資源自体も保護する（詳細はlib/geminiBudget.ts参照）。
     if (!reserveGeminiCall(DUPLICATE_MODEL)) {
       return NextResponse.json(
-        { error: "本日のAI機能の利用上限に達しました。しばらくしてから再度お試しください。" },
+        { error: "今日のAI機能の上限に達しました。しばらくしてからもう一度試してください。" },
         { status: 429 }
       );
     }
@@ -127,7 +127,7 @@ ${taskListText}`;
         issues: validated.error.issues,
       });
       return NextResponse.json(
-        { error: "AIの提案結果が不正な形式でした。もう一度お試しください。" },
+        { error: "AIの提案結果が不正な形式でした。もう一度試してください。" },
         { status: 502 }
       );
     }
@@ -154,7 +154,7 @@ ${taskListText}`;
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(
-      { error: "重複チェックに失敗しました。しばらくしてから再度お試しください。" },
+      { error: "重複を探せませんでした。しばらくしてからもう一度試してください。" },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Task, TaskStatus } from "../types/kanban";
 
 type TaskPatch = Partial<
@@ -162,20 +162,71 @@ export function useKanban() {
     }
   };
 
-  const deleteTask = async (id: string) => {
-    const previousTasks = tasks;
-    setTasks((prev) => prev.filter((task) => task.id !== id));
+  // 削除はすぐには確定させない。一定時間は「元に戻す」ができ、過ぎたら本当に削除する。
+  // 先に画面から消し、サーバーへのDELETEは猶予のあとに送る（確認ダイアログの代わり）。
+  const UNDO_MS = 6000;
+  const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
+  const pendingRef = useRef<{ task: Task; timer: ReturnType<typeof setTimeout> } | null>(null);
 
+  const sendDelete = useCallback(async (task: Task) => {
     try {
       await requestJson<{ ok: boolean }>("/api/tasks", {
         method: "DELETE",
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: task.id }),
       });
     } catch (error) {
       console.error("Task deletion failed:", error);
-      setTasks(previousTasks);
+      setTasks((prev) => (prev.some((t) => t.id === task.id) ? prev : [task, ...prev]));
     }
+  }, []);
+
+  const commitPendingDelete = useCallback(() => {
+    const current = pendingRef.current;
+    if (!current) return;
+    clearTimeout(current.timer);
+    pendingRef.current = null;
+    setPendingDelete(null);
+    void sendDelete(current.task);
+  }, [sendDelete]);
+
+  const deleteTask = (id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    // 前の削除がまだ猶予中なら、先に確定させる（同時に取り消せるのは直近の1件だけ）。
+    commitPendingDelete();
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    const timer = setTimeout(commitPendingDelete, UNDO_MS);
+    pendingRef.current = { task, timer };
+    setPendingDelete(task);
   };
+
+  const undoDelete = () => {
+    const current = pendingRef.current;
+    if (!current) return;
+    clearTimeout(current.timer);
+    pendingRef.current = null;
+    setPendingDelete(null);
+    setTasks((prev) =>
+      [...prev, current.task].sort((a, b) => b.createdAt - a.createdAt)
+    );
+  };
+
+  // ページを離れるときに猶予中の削除が失われないよう、keepaliveで確定させる。
+  useEffect(() => {
+    const flush = () => {
+      const current = pendingRef.current;
+      if (!current) return;
+      pendingRef.current = null;
+      void fetch("/api/tasks", {
+        method: "DELETE",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: current.task.id }),
+      });
+    };
+    window.addEventListener("pagehide", flush);
+    return () => window.removeEventListener("pagehide", flush);
+  }, []);
 
   const updateTaskStatus = (id: string, newStatus: TaskStatus) => {
     void patchTask(id, { status: newStatus });
@@ -222,8 +273,6 @@ export function useKanban() {
   };
 
   const clearCompletedTasks = async () => {
-    if (!window.confirm("完了したすべてのタスクを削除しますか？")) return;
-
     const previousTasks = tasks;
     setTasks((prev) => prev.filter((task) => task.status !== "DONE"));
 
@@ -295,6 +344,8 @@ export function useKanban() {
     draggedOverLane,
     addTask,
     deleteTask,
+    undoDelete,
+    pendingDelete,
     updateTaskStatus,
     updateTaskCategory,
     editTaskTitle,
