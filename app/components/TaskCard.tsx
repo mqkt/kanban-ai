@@ -14,6 +14,9 @@ interface TaskCardProps {
   editTaskTitle: (id: string, title: string) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragEnd: (e: React.DragEvent, id: string) => void;
+  // 同じ列の中で1つ上・下へ動かす（キーボードでも使える並べ替え）。動かせない向きは渡さない。
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,6 +45,8 @@ export default function TaskCard({
   editTaskTitle,
   onDragStart,
   onDragEnd,
+  onMoveUp,
+  onMoveDown,
 }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingTitle, setEditingTitle] = useState("");
@@ -114,6 +119,16 @@ export default function TaskCard({
       <button onClick={() => deleteTask(task.id)} className={`${act} hover:!text-error`}>
         削除
       </button>
+      {onMoveUp && (
+        <button onClick={onMoveUp} className={act}>
+          上へ
+        </button>
+      )}
+      {onMoveDown && (
+        <button onClick={onMoveDown} className={act}>
+          下へ
+        </button>
+      )}
       {previousStatus && (
         <button
           onClick={() => updateTaskStatus(task.id, previousStatus)}
@@ -190,7 +205,7 @@ export default function TaskCard({
               {task.title}
             </span>
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 pb-4 text-sm">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 pb-4 text-sm">
             {actions}
           </div>
         </>

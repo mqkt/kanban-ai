@@ -49,6 +49,7 @@ export interface Task {
   createdAt: number; // タスクが作成された日時（JSONやlocalStorageに安全に保存するため、タイムスタンプ数値で管理）
   updatedAt?: number; // タスクが最後に更新された日時（停滞タスク検知に使用）
   category?: string; // 自動分類されたカテゴリ
+  position?: number | null; // 同じ列の中での並び順（空なら作成日時の新しい順）
   isClassifying?: boolean; // AIによる分類処理中を示すフラグ
   error?: string | boolean; // AIによる分類処理のエラー状態
 }

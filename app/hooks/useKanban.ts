@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Task, TaskStatus } from "../types/kanban";
+import { planReorder } from "@/lib/taskOrder";
 
 type TaskPatch = Partial<
   Pick<Task, "title" | "status">
-> & { category?: string | null };
+> & { category?: string | null; position?: number | null };
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -228,8 +229,20 @@ export function useKanban() {
     return () => window.removeEventListener("pagehide", flush);
   }, []);
 
+  // ボタンでの列移動。並び順は空に戻し、移動先の列では従来どおり新しい順に並べる。
   const updateTaskStatus = (id: string, newStatus: TaskStatus) => {
-    void patchTask(id, { status: newStatus });
+    void patchTask(id, { status: newStatus, position: null });
+  };
+
+  // taskId を laneId の beforeId の手前（null なら末尾）に置く。列の全カードに 0,1,2… を振り直し、
+  // 番号が変わったカードだけを保存する。
+  const placeTask = (taskId: string, laneId: TaskStatus, beforeId: string | null) => {
+    for (const patch of planReorder(tasks, taskId, laneId, beforeId)) {
+      void patchTask(patch.id, {
+        position: patch.position,
+        ...(patch.status ? { status: patch.status as TaskStatus } : {}),
+      });
+    }
   };
 
   const updateTaskCategory = (id: string, category: string | null) => {
@@ -321,11 +334,17 @@ export function useKanban() {
     }
   };
 
-  const handleDropLane = (e: React.DragEvent, laneId: TaskStatus) => {
+  // beforeId: 未指定なら「列に落とした」だけ（列移動のみ）。string なら そのカードの手前、null なら末尾。
+  const handleDropLane = (e: React.DragEvent, laneId: TaskStatus, beforeId?: string | null) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
     if (taskId) {
-      updateTaskStatus(taskId, laneId);
+      if (beforeId === undefined) {
+        const moving = tasks.find((t) => t.id === taskId);
+        if (moving && moving.status !== laneId) updateTaskStatus(taskId, laneId);
+      } else {
+        placeTask(taskId, laneId, beforeId);
+      }
     }
     setDraggedTaskId(null);
     setDraggedOverLane(null);
@@ -347,6 +366,7 @@ export function useKanban() {
     undoDelete,
     pendingDelete,
     updateTaskStatus,
+    placeTask,
     updateTaskCategory,
     editTaskTitle,
     mergeTasks,

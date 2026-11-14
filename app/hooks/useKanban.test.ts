@@ -83,7 +83,48 @@ describe("useKanban", () => {
       expect(JSON.parse((patchCall![1] as RequestInit).body as string)).toEqual({
         id: "todo-1",
         status: "IN_PROGRESS",
+        // ボタンでの列移動は、並び順を空に戻す（移動先では従来どおり新しい順に並ぶ）。
+        position: null,
       });
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("renumbers only the cards whose order changed when a card is placed before another", async () => {
+    const tasks = [
+      { ...makeTask("a", "TODO"), createdAt: 3000 },
+      { ...makeTask("b", "TODO"), createdAt: 2000 },
+      { ...makeTask("c", "TODO"), createdAt: 1000 },
+    ];
+    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        const body = JSON.parse(init.body as string);
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ task: { ...tasks.find((t) => t.id === body.id), ...body } }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ tasks, nextCursor: null }) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useKanban());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.placeTask("c", "TODO", "a"));
+
+    await waitFor(() => {
+      const bodies = fetchMock.mock.calls
+        .filter(([, init]) => (init as RequestInit | undefined)?.method === "PATCH")
+        .map(([, init]) => JSON.parse((init as RequestInit).body as string));
+      expect(bodies).toEqual(
+        expect.arrayContaining([
+          { id: "c", position: 0 },
+          { id: "a", position: 1 },
+          { id: "b", position: 2 },
+        ])
+      );
     });
 
     vi.unstubAllGlobals();

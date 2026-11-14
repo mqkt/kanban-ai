@@ -19,6 +19,7 @@ const taskSelect = {
   title: true,
   status: true,
   category: true,
+  position: true,
   createdAt: true,
   updatedAt: true,
 };
@@ -28,6 +29,7 @@ function serializeTask(task: {
   title: string;
   status: TaskStatus;
   category: string | null;
+  position: number | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -36,6 +38,7 @@ function serializeTask(task: {
     title: task.title,
     status: task.status,
     category: task.category ?? undefined,
+    position: task.position ?? undefined,
     createdAt: task.createdAt.getTime(),
     updatedAt: task.updatedAt.getTime(),
   };
@@ -161,6 +164,7 @@ export async function PATCH(request: Request) {
   if ("title" in fields) data.title = fields.title;
   if ("status" in fields) data.status = fields.status;
   if ("category" in fields) data.category = fields.category;
+  if ("position" in fields) data.position = fields.position;
 
   // updateMany による所有権チェックと再取得を1トランザクションにまとめ、
   // 両クエリの間に別リクエストが割り込む TOCTOU ギャップを閉じる。

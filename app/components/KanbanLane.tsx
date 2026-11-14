@@ -11,7 +11,8 @@ interface KanbanLaneProps {
   isDraggedOver: boolean;
   onDragOver: (e: React.DragEvent, laneId: TaskStatus) => void;
   onDragLeave: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, laneId: TaskStatus) => void;
+  onDrop: (e: React.DragEvent, laneId: TaskStatus, beforeId?: string | null) => void;
+  onPlace: (taskId: string, laneId: TaskStatus, beforeId: string | null) => void;
   deleteTask: (id: string) => void;
   updateTaskStatus: (id: string, newStatus: TaskStatus) => void;
   updateTaskCategory: (id: string, category: string | null) => void;
@@ -29,6 +30,7 @@ export default function KanbanLane({
   onDragOver,
   onDragLeave,
   onDrop,
+  onPlace,
   deleteTask,
   updateTaskStatus,
   updateTaskCategory,
@@ -40,14 +42,36 @@ export default function KanbanLane({
   const collapsible = lane.id === "DONE";
   const [collapsed, setCollapsed] = useState(true);
   const [confirmingClear, setConfirmingClear] = useState(false);
+  // ドラッグ中の挿入位置。string = そのカードの手前、null = 末尾、undefined = 表示なし。
+  const [insertBefore, setInsertBefore] = useState<string | null | undefined>(undefined);
+
+  // ポインターの高さから、どのカードの手前に入れるかを決める。
+  const beforeIdAt = (e: React.DragEvent): string | null => {
+    const cards = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[id^="card-"]'));
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) return card.id.replace(/^card-/, "");
+    }
+    return null;
+  };
   const open = !collapsible || !collapsed || isDraggedOver || tasks.length === 0;
 
   return (
     <section
       className={`min-w-0 transition-colors duration-[var(--dur-short)] ${isDraggedOver ? "bg-accent-soft" : ""}`}
-      onDragOver={(e) => onDragOver(e, lane.id)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, lane.id)}
+      onDragOver={(e) => {
+        onDragOver(e, lane.id);
+        if (tasks.length > 0) setInsertBefore(beforeIdAt(e));
+      }}
+      onDragLeave={(e) => {
+        onDragLeave(e);
+        setInsertBefore(undefined);
+      }}
+      onDrop={(e) => {
+        const before = tasks.length > 0 ? beforeIdAt(e) : undefined;
+        setInsertBefore(undefined);
+        onDrop(e, lane.id, before);
+      }}
     >
       <h2
         className={`flex max-w-none items-baseline gap-3 border-t-2 border-ink pt-2 transition-colors duration-[var(--dur-short)] ${
@@ -93,18 +117,29 @@ export default function KanbanLane({
           {tasks.length === 0 ? (
             <p className="border border-rule px-3 py-6 text-sm text-muted">{lane.title}のタスクはありません</p>
           ) : (
-            tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                deleteTask={deleteTask}
-                updateTaskStatus={updateTaskStatus}
-                updateTaskCategory={updateTaskCategory}
-                editTaskTitle={editTaskTitle}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-              />
-            ))
+            <>
+              {tasks.map((task, index) => (
+                <div key={task.id} className="flex flex-col gap-3">
+                  {isDraggedOver && insertBefore === task.id && <div aria-hidden="true" className="h-1 bg-ink" />}
+                  <TaskCard
+                    task={task}
+                    deleteTask={deleteTask}
+                    updateTaskStatus={updateTaskStatus}
+                    updateTaskCategory={updateTaskCategory}
+                    editTaskTitle={editTaskTitle}
+                    onDragStart={onDragStart}
+                    onDragEnd={onDragEnd}
+                    onMoveUp={index > 0 ? () => onPlace(task.id, lane.id, tasks[index - 1].id) : undefined}
+                    onMoveDown={
+                      index < tasks.length - 1
+                        ? () => onPlace(task.id, lane.id, tasks[index + 2]?.id ?? null)
+                        : undefined
+                    }
+                  />
+                </div>
+              ))}
+              {isDraggedOver && insertBefore === null && <div aria-hidden="true" className="h-1 bg-ink" />}
+            </>
           )}
         </div>
       )}
