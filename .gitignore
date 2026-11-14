@@ -52,3 +52,6 @@ next-env.d.ts
 *.tfvars.json
 terraform.tfvars
 terraform/.old-project-project-c812eeb4/
+
+# hallmark（デザイン用スキル）の作業記録。公開しない
+/.hallmark/
