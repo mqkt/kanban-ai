@@ -1,136 +1,96 @@
 "use client";
 
-import { Copy, Loader2, Merge, X } from "lucide-react";
 import { Task } from "../types/kanban";
 import { DuplicateSuggestion } from "../hooks/useDuplicates";
+import InlineConfirm from "./InlineConfirm";
 
-/**
- * ==========================================
- * 【初心者向け解説：このファイルはなぜ必要か？】
- * ==========================================
- * 「GitHubで人生を管理する」動画で紹介されている運用手法の1つ、
- * 「溜まったタスクの中から重複・統合できそうなものをAIに整理させる」を
- * 再現するUIです。定期実行や自動マージは行わず、ボタンを押した時だけAIに判断させ、
- * 提案された組み合わせは1件ずつ「統合する」か「無視する」かをユーザー自身が選びます。
- *
- * ==========================================
- * 【Propsの意味】
- * ==========================================
- * - `tasks` (Task[]): 提案に含まれるタスクIDからタイトルを逆引きするために使う。
- * - `suggestions` / `isRunning` / `error` / `hasRun`: useDuplicatesフックの状態そのもの。
- * - `onRun`: 「重複をチェック」ボタン押下時にAI呼び出しを実行する関数。
- * - `onDismiss`: ある提案を「無視」して一覧から消す関数。
- * - `onMerge`: ある提案を実際に統合（1件を残して残りを削除）する関数。
- */
-
-interface DuplicatePanelProps {
-  tasks: Task[];
-  suggestions: DuplicateSuggestion[];
+export function DuplicateButton({
+  isRunning,
+  onRun,
+}: {
   isRunning: boolean;
-  error: string | null;
-  hasRun: boolean;
   onRun: () => void;
-  onDismiss: (index: number) => void;
-  onMerge: (index: number) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onRun()}
+      disabled={isRunning}
+      className="key"
+    >
+      {isRunning ? "探しています…" : "重複タスクをまとめる"}
+    </button>
+  );
 }
 
-export default function DuplicatePanel({
+export function DuplicateResults({
   tasks,
   suggestions,
   isRunning,
   error,
   hasRun,
-  onRun,
+  pendingOverwrite,
+  onConfirmRerun,
+  onCancelRerun,
   onDismiss,
   onMerge,
-}: DuplicatePanelProps) {
+}: {
+  tasks: Task[];
+  suggestions: DuplicateSuggestion[];
+  isRunning: boolean;
+  error: string | null;
+  hasRun: boolean;
+  pendingOverwrite: boolean;
+  onConfirmRerun: () => void;
+  onCancelRerun: () => void;
+  onDismiss: (index: number) => void;
+  onMerge: (index: number) => void;
+}) {
   const titleFor = (taskId: string) =>
     tasks.find((task) => task.id === taskId)?.title ?? "（削除済み）";
 
+  const empty = hasRun && !isRunning && suggestions.length === 0 && !error;
+  if (!error && !empty && suggestions.length === 0) return null;
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Copy className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-          <div>
-            <h2 className="text-sm font-bold text-stone-700 dark:text-stone-200">
-              重複タスクのチェック
-            </h2>
-            <p className="text-xs text-stone-400 dark:text-stone-500">
-              AIが未完了タスクの中から重複・統合できそうな組み合わせを提案します（実行するとGemini
-              APIを1回呼び出します）
-            </p>
+      {pendingOverwrite && (
+        <InlineConfirm
+          message={`未確認の提案が${suggestions.length}件あります。もう一度探すと上書きされます。`}
+          confirmLabel="上書きして探す"
+          onConfirm={onConfirmRerun}
+          onCancel={onCancelRerun}
+        />
+      )}
+      {error && <p role="alert" className="text-sm text-error">{error}</p>}
+      {empty && <p className="text-sm text-muted">重複はありません。</p>}
+      {suggestions.map((suggestion, index) => (
+        <div key={`${suggestion.taskIds.join("-")}-${index}`} className="border-2 border-ink bg-plate p-4 shadow-card">
+          <p className="text-sm text-muted">似たタスクが見つかりました</p>
+          <ul className="mt-2 flex flex-col text-base font-medium">
+            {suggestion.taskIds.map((taskId) => (
+              <li key={taskId} className="break-all border-b border-rule py-2">
+                {titleFor(taskId)}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-muted">{suggestion.reason}</p>
+
+          <div className="mt-4 border-t-2 border-ink pt-3">
+            <p className="text-sm text-muted">まとめると、{suggestion.taskIds.length}件が1件になります</p>
+            <p className="mt-1 break-all text-lg font-medium">「{suggestion.suggestedTitle}」</p>
+          </div>
+
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={() => onMerge(index)} className="key-primary min-h-10">
+              まとめる
+            </button>
+            <button type="button" onClick={() => onDismiss(index)} className="key">
+              無視
+            </button>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onRun}
-          disabled={isRunning}
-          className="btn-action-secondary flex items-center gap-1.5 px-3 py-2 text-xs font-semibold"
-        >
-          {isRunning ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Copy className="w-3.5 h-3.5" />
-          )}
-          {isRunning ? "確認中..." : "重複をチェック"}
-        </button>
-      </div>
-
-      {error && (
-        <p className="text-xs font-semibold text-red-600 dark:text-red-400">
-          {error}
-        </p>
-      )}
-
-      {hasRun && !isRunning && suggestions.length === 0 && !error && (
-        <p className="text-xs text-stone-400 dark:text-stone-500">
-          重複・統合できそうなタスクは見つかりませんでした。
-        </p>
-      )}
-
-      {suggestions.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={`${suggestion.taskIds.join("-")}-${index}`}
-              className="rounded-lg border border-indigo-200/60 dark:border-indigo-900/40 bg-indigo-50 dark:bg-indigo-950/20 p-3 flex flex-col gap-2"
-            >
-              <ul className="text-xs text-stone-600 dark:text-stone-300 list-disc list-inside">
-                {suggestion.taskIds.map((taskId) => (
-                  <li key={taskId} className="break-all">
-                    {titleFor(taskId)}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-[11px] text-stone-400 dark:text-stone-500">
-                {suggestion.reason}
-              </p>
-              <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                統合後のタイトル案: 「{suggestion.suggestedTitle}」
-              </p>
-              <div className="flex items-center gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => onDismiss(index)}
-                  className="p-1.5 flex items-center gap-1 text-[11px] font-semibold text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  無視する
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onMerge(index)}
-                  className="p-1.5 flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
-                >
-                  <Merge className="w-3.5 h-3.5" />
-                  統合する
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      ))}
     </div>
   );
 }

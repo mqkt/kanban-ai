@@ -2,11 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signIn, signOut } from "@/auth";
 import { startGuestSession } from "../actions";
-import { ArrowLeft, UserRound } from "lucide-react";
+import SiteBar from "../components/SiteBar";
 
-// lucide-reactは汎用アイコンセットでブランドロゴを含まないため、
-// Googleの「G」マークだけはインラインSVGで直接埋め込んでいる。
-// ボタンが不透明な青地なので、公式4色ではなく単色（currentColor、ボタンの文字色に追従）にしている。
+// ブランドロゴはアイコンセットに無いため、Googleの「G」マークはインラインSVGで直接埋め込んでいる。
+// 公式4色ではなく単色（currentColor、ボタンの文字色に追従）で埋め込んでいる。
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
@@ -40,28 +39,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="app-bg flex min-h-screen items-center justify-center px-4 py-8">
-      <section className="panel-card w-full max-w-md p-6 sm:p-8">
-        <Link
-          href="/"
-          className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-stone-500 transition-colors hover:text-stone-900 dark:text-stone-400 dark:hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4" />
+    <main className="min-h-screen bg-paper text-ink">
+      <SiteBar />
+      <div className="mx-auto max-w-md px-5 pt-16 pb-16">
+        <Link href="/" className="link-quiet text-sm">
           戻る
         </Link>
 
-        <div className="mb-7">
-          <h1 className="text-2xl font-black tracking-normal text-stone-950 dark:text-white">
-            ログイン
-          </h1>
-          <p className="mt-2 text-sm font-medium leading-6 text-stone-500 dark:text-stone-400">
-            {session?.user.isGuest
-              ? "Googleアカウントに切り替えると新しいアカウントとして開始します。現在のゲストのタスクは引き継がれません。"
-              : "Googleアカウントでログイン、またはゲストとしてすぐに試せます。"}
-          </p>
-        </div>
+        <h1 className="mt-8 text-3xl">ログイン</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">
+          {session?.user.isGuest
+            ? "Googleでログインすると新しいアカウントになります。今のゲストのタスクは引き継がれません。"
+            : "Googleでログインするか、ゲストですぐに試せます。"}
+        </p>
 
         <form
+          className="mt-8"
           action={async () => {
             "use server";
             // ゲストのセッションCookieを残したままGoogle認証を開始すると、Auth.jsは
@@ -74,7 +67,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             await signIn("google", { redirectTo: callbackUrl });
           }}
         >
-          <button type="submit" className="btn-action-primary w-full">
+          <button type="submit" className="key-primary w-full">
             <GoogleIcon />
             Googleで続ける
           </button>
@@ -85,28 +78,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             新しい使い捨てアカウントを発行し直し、今のタスクを失わせてしまう。
             セッションが全く無い（直接 /login に来た）場合にのみ表示する。 */}
         {!session && (
-          <>
-            <div className="my-5 flex items-center gap-3 text-xs font-bold text-stone-400">
-              <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
-              またはアカウントなしで
-              <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
-            </div>
-
-            <form action={startGuestSession.bind(null, callbackUrl)}>
-              <button
-                type="submit"
-                className="btn-action-secondary flex w-full items-center justify-center gap-2 py-3"
-              >
-                <UserRound className="h-5 w-5" />
-                ゲストで試す
-              </button>
-            </form>
-            <p className="mt-3 text-center text-xs font-medium text-stone-400">
-              ログイン不要ですぐに使い始められます。
-            </p>
-          </>
+          <form className="mt-3" action={startGuestSession.bind(null, callbackUrl)}>
+            <button type="submit" className="key min-h-12 w-full">
+              ゲストで試す
+            </button>
+          </form>
         )}
-      </section>
+      </div>
     </main>
   );
 }

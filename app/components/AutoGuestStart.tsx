@@ -27,7 +27,7 @@ export default function AutoGuestStart() {
   return (
     <form ref={formRef} action={startGuestSession.bind(null, "/")}>
       <noscript>
-        <button type="submit" className="apple-btn-primary">
+        <button type="submit" className="key-primary">
           ゲストとして始める
         </button>
       </noscript>

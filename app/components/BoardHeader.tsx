@@ -2,165 +2,82 @@
 
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Sun, Moon, Trash2, ListChecks, LogOut, LogIn } from "lucide-react";
-
-/**
- * ==========================================
- * 【初心者向け解説：このファイルはなぜ必要か？】
- * ==========================================
- * かんばんボード全体の「看板（タイトル）」や「グローバルな操作ボタン（ダークモード切り替えや一括削除）」を
- * 1つの独立したUI部品（コンポーネント）として管理するためです。
- * 画面の最上部にあるこの領域を他のUIと分けることで、ヘッダーにデザイン修正を入れたい場合に
- * このファイルだけを触れば良くなり、コードの整理整頓が保たれます。
- *
- * ==========================================
- * 【何を担当するか】
- * ==========================================
- * 以下のUI表示とイベントトリガーを担当します：
- * 1. アプリケーションタイトルの表示。
- * 2. 完了タスクが1つ以上ある場合に表示される「完了タスクをクリア」ボタンの描画。
- * 3. 現在のテーマ（ライト/ダーク）に応じたテーマ切り替えボタンの描画。
- *
- * ==========================================
- * 【Propsの意味】
- * ==========================================
- * 親コンポーネント（page.tsx）やフックからデータと処理の指示を受け取ります。
- * - `isDarkMode` (boolean):
- *     現在ダークモードがONかOFFか。これに応じて太陽/月アイコンを切り替えます。
- * - `toggleDarkMode` (() => void):
- *     テーマ切り替えボタンをクリックしたときに呼び出される関数。
- * - `hasCompletedTasks` (boolean):
- *     現在「完了（DONE）」レーンにタスクが存在しているかどうか。存在する時のみ「完了クリア」ボタンを表示します。
- * - `clearCompletedTasks` (() => void):
- *     「完了タスクをクリア」ボタンをクリックしたときに呼び出される一括削除関数。
- * - `isGuest` (boolean):
- *     ゲストセッションかどうか。trueの場合のみ、Google/メールで正式アカウントに
- *     切り替えるための「ログイン」リンクを表示する（自動開始したゲストが
- *     いつでも本登録に移行できるようにするため）。
- *
- * ==========================================
- * 【State（内部状態）の役割】
- * ==========================================
- * ※ このコンポーネントは表示専用の「木構造の末端（プレゼンテーショナルコンポーネント）」であるため、
- * 　 自身で管理するStateを持ちません。すべて親から渡されたPropsだけで動作します。
- */
 
 interface BoardHeaderProps {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  hasCompletedTasks: boolean;
-  clearCompletedTasks: () => void;
   isGuest: boolean;
   userName: string | null;
   userImage: string | null;
 }
 
+// アイコンはcurrentColorで描く（ボタンの文字色に追従する）。
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" aria-hidden="true">
+      <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  );
+}
+
+// ヘッダーは3つだけ: 名前、アカウント（状態の説明とその操作を1組）、設定（テーマ）。
+// 広い画面では1行、狭い画面では「名前と設定」「アカウント」の2行にする。
 export default function BoardHeader({
   isDarkMode,
   toggleDarkMode,
-  hasCompletedTasks,
-  clearCompletedTasks,
   isGuest,
   userName,
   userImage,
 }: BoardHeaderProps) {
+  const accountLabel = isGuest ? (
+    <span className="min-w-0 text-sm text-muted [word-break:auto-phrase]">ゲストのデータは24時間で消えます</span>
+  ) : (
+    <span className="flex min-w-0 items-center gap-2 text-sm">
+      {userImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={userImage} alt="" referrerPolicy="no-referrer" className="h-6 w-6 shrink-0 rounded-full" />
+      )}
+      <span className="max-w-[9rem] truncate">{userName ?? "アカウント"}</span>
+    </span>
+  );
+
+  // ゲストには永続アカウントが無く、ログアウトは今のタスクを捨てて別のゲストに
+  // 切り替わるだけになるため、正式ユーザーにのみ表示する。
+  const accountControl = isGuest ? (
+    <Link href="/login" className="key min-h-11 shrink-0 whitespace-nowrap no-underline sm:min-h-9">
+      保存するにはログイン
+    </Link>
+  ) : (
+    <button onClick={() => signOut({ callbackUrl: "/" })} className="key min-h-11 shrink-0 whitespace-nowrap sm:min-h-9" aria-label="ログアウト">
+      ログアウト
+    </button>
+  );
+
   return (
-    <header className="panel-card px-6 py-6 sm:py-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      {/* タイトルとサブテキストエリア */}
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-sm">
-          <ListChecks className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900 dark:text-white">
-            Kanban Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 font-medium mt-0.5">
-            タスクのカテゴリをAIが自動判定し、重複タスクの検出もできます。
-          </p>
-        </div>
-      </div>
+    <header className="border-b-2 border-ink bg-paper">
+      <div className="mx-auto flex w-full max-w-[var(--container)] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-[var(--gutter)] py-2 sm:min-h-14">
+        <h1 className="order-1 max-w-none whitespace-nowrap text-xl leading-none">Kanban Dashboard</h1>
 
-      {/* 右側のボタンアクションエリア。
-          種類の異なるアクションを左から「ボード操作」「表示設定」「アカウント」の
-          3グループに分け、アカウント関連（アイデンティティ表示 + ログイン/ログアウト）を
-          一般的なアプリの慣習に合わせて最右端にひとまとめにしている。 */}
-      <div className="flex items-center gap-3 self-end sm:self-center">
-        {/* 完了タスクが存在する場合のみ、クリアボタンを表示する */}
-        {hasCompletedTasks && (
-          <button
-            onClick={clearCompletedTasks}
-            className="btn-action-danger"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            完了タスクをクリア
-          </button>
-        )}
-
-        {/* ダークモード切り替えボタン */}
         <button
           onClick={toggleDarkMode}
-          className="btn-action-secondary"
-          aria-label="テーマを切り替える"
+          className="key order-2 min-h-11 min-w-11 px-0 sm:order-3 sm:min-h-9 sm:min-w-9"
+          aria-label={isDarkMode ? "ライトに切り替える" : "ダークに切り替える"}
         >
-          {isDarkMode ? (
-            <Sun className="w-5 h-5 text-amber-500" />
-          ) : (
-            <Moon className="w-5 h-5 text-indigo-600" />
-          )}
+          {isDarkMode ? <SunIcon /> : <MoonIcon />}
         </button>
 
-        <div className="flex items-center gap-1.5 pl-2 border-l border-stone-200 dark:border-stone-800">
-          {/* 今どのアカウントでログイン中か常に見えるようにする。ゲストは名前を持たないため
-              固定ラベルにし、正式ユーザーはアバター（無ければ頭文字）+ 名前かメールを表示する。 */}
-          {isGuest ? (
-            <span className="px-2.5 py-1.5 rounded-full text-xs font-semibold text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-800">
-              ゲスト利用中
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-stone-600 dark:text-stone-300">
-              {userImage ? (
-                <img
-                  src={userImage}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  className="w-6 h-6 rounded-full"
-                />
-              ) : (
-                <span className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
-                  {(userName ?? "?").charAt(0).toUpperCase()}
-                </span>
-              )}
-              <span className="max-w-[9rem] truncate">{userName ?? "アカウント"}</span>
-            </span>
-          )}
-
-          {/* ゲストの間だけ、正式アカウントへの切り替え導線を表示する */}
-          {isGuest && (
-            <Link
-              href="/login"
-              className="btn-action-secondary flex items-center gap-1.5 px-3 text-xs font-semibold"
-            >
-              <LogIn className="w-4 h-4" />
-              ログイン
-            </Link>
-          )}
-
-          {/* ゲストには「ログアウトすべき永続アカウント」がそもそも存在しない。
-              signOutしてもセッションが消えるだけで、`/`への遷移時にAutoGuestStartが
-              即座に新しい使い捨てゲストを発行し直すため、実質「今のタスクを黙って
-              捨てて別アカウントに切り替わる」ボタンになってしまう。「ログイン」と
-              対称に、正式ユーザー（!isGuest）の時だけ表示する。 */}
-          {!isGuest && (
-            <button
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="btn-action-secondary"
-              aria-label="ログアウト"
-              title="ログアウト"
-            >
-              <LogOut className="w-5 h-5 text-stone-600 dark:text-stone-300" />
-            </button>
-          )}
+        <div className="order-3 flex w-full items-center justify-between gap-4 sm:order-2 sm:ml-auto sm:w-auto">
+          {accountLabel}
+          {accountControl}
         </div>
       </div>
     </header>

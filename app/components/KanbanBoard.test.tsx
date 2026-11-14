@@ -52,10 +52,35 @@ describe("KanbanBoard category filter", () => {
     expect(screen.getByText("仕事のタスク")).toBeInTheDocument();
     expect(screen.queryByText("趣味のタスク")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /クリア/ }));
+    await user.click(screen.getByRole("button", { name: /解除/ }));
 
     expect(screen.getByText("仕事のタスク")).toBeInTheDocument();
     expect(screen.getByText("趣味のタスク")).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("filters cards by a title search, ignoring spaces and case", async () => {
+    const tasks = [
+      makeTask("a", "Weekly Report", "仕事"),
+      makeTask("b", "買い物に行く", "家事"),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ tasks, nextCursor: null }),
+      })
+    );
+
+    const user = userEvent.setup();
+    render(<KanbanBoard isGuest={false} userName="テストユーザー" userImage={null} />);
+    await waitFor(() => expect(screen.getByText("Weekly Report")).toBeInTheDocument());
+
+    await user.type(screen.getByRole("searchbox", { name: "タスクを検索" }), "weekly  report");
+
+    expect(screen.getByText("Weekly Report")).toBeInTheDocument();
+    expect(screen.queryByText("買い物に行く")).not.toBeInTheDocument();
 
     vi.unstubAllGlobals();
   });

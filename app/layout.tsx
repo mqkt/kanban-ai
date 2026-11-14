@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Syne, Onest, JetBrains_Mono, Zen_Kaku_Gothic_New } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const syne = Syne({ variable: "--font-syne", subsets: ["latin"], weight: "700", display: "swap" });
+const onest = Onest({ variable: "--font-onest", subsets: ["latin"], weight: ["400", "500"], display: "swap" });
+const jbmono = JetBrains_Mono({ variable: "--font-jbmono", subsets: ["latin"], weight: "500", display: "swap" });
+const jp = Zen_Kaku_Gothic_New({ variable: "--font-jp", subsets: ["latin"], weight: ["400", "500", "700"], display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.AUTH_URL ?? "http://localhost:3000"),
   title: "Kanban Dashboard",
-  description: "タスクのカテゴリをAIが自動判定し、重複タスクの検出もできます。",
+  description: "カテゴリはAIが付け、重複もAIが探すタスクボード。",
+  openGraph: {
+    title: "Kanban Dashboard",
+    description: "カテゴリはAIが付け、重複もAIが探すタスクボード。",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default async function RootLayout({
@@ -26,7 +28,11 @@ export default async function RootLayout({
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="ja"
+      suppressHydrationWarning
+      className={`${syne.variable} ${onest.variable} ${jbmono.variable} ${jp.variable}`}
+    >
       <head>
         {/* ページ描画前にダークモードを適用してフラッシュを防ぐ */}
         {/* ブラウザはXSS対策でnonce属性をDOM上から読めなくする（getAttributeが空文字を返す）ため、
@@ -40,7 +46,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
       >
         {children}
       </body>

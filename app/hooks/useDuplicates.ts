@@ -32,14 +32,16 @@ export function useDuplicates() {
   const [error, setError] = useState<string | null>(null);
   const [hasRun, setHasRun] = useState(false);
 
-  const runDuplicateCheck = async () => {
-    if (suggestions.length > 0) {
-      const proceed = window.confirm(
-        `まだ確認していない提案が${suggestions.length}件あります。再チェックすると上書きされますが、続けますか？`
-      );
-      if (!proceed) return;
+  // 未確認の提案が残っているときは、上書きしてよいかを画面内で確認してから実行する。
+  const [pendingOverwrite, setPendingOverwrite] = useState(false);
+
+  const runDuplicateCheck = async (confirmed = false) => {
+    if (suggestions.length > 0 && !confirmed) {
+      setPendingOverwrite(true);
+      return;
     }
 
+    setPendingOverwrite(false);
     setIsRunning(true);
     setError(null);
     try {
@@ -51,12 +53,15 @@ export function useDuplicates() {
       setHasRun(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "重複チェックに失敗しました"
+        err instanceof Error ? err.message : "重複を探せませんでした"
       );
     } finally {
       setIsRunning(false);
     }
   };
+
+  const confirmRerun = () => runDuplicateCheck(true);
+  const cancelRerun = () => setPendingOverwrite(false);
 
   const dismissSuggestion = (index: number) => {
     setSuggestions((prev) => prev.filter((_, i) => i !== index));
@@ -73,6 +78,9 @@ export function useDuplicates() {
     isRunning,
     error,
     hasRun,
+    pendingOverwrite,
+    confirmRerun,
+    cancelRerun,
     runDuplicateCheck,
     dismissSuggestion,
     reset,
