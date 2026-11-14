@@ -18,8 +18,6 @@ interface TaskCardProps {
   // 同じ列の中で1つ上・下へ動かす（キーボードでも使える並べ替え）。動かせない向きは渡さない。
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-  // 完了の台帳用。プレートではなく、罫線で区切った1行として描く。
-  compact?: boolean;
 }
 
 // 「いま一番自然な1手」。メニューの先頭に置く。完了のカードには決めない。
@@ -60,7 +58,6 @@ export default function TaskCard({
   onDragEnd,
   onMoveUp,
   onMoveDown,
-  compact = false,
 }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingTitle, setEditingTitle] = useState("");
@@ -177,26 +174,12 @@ export default function TaskCard({
       draggable={!isEditing}
       onDragStart={(e) => onDragStart(e, task.id)}
       onDragEnd={(e) => onDragEnd(e, task.id)}
-      className={
-        compact
-          ? "group cursor-grab border-b border-rule transition-colors duration-[var(--dur-micro)] hover:bg-accent-soft active:cursor-grabbing"
-          : "group cursor-grab border-2 border-ink bg-plate transition-shadow duration-[var(--dur-micro)] hover:shadow-card-hover active:cursor-grabbing shadow-card"
-      }
+      className={`group cursor-grab border-2 border-ink bg-plate transition-shadow duration-[var(--dur-micro)] hover:shadow-card-hover active:cursor-grabbing ${
+        task.status === "DONE" ? "shadow-none" : "shadow-card"
+      }`}
     >
       {isEditing ? (
         editor
-      ) : compact ? (
-        // 広い画面では、上の3列と同じ位置に項目をそろえる（タイトル / カテゴリ / 日時と「⋯」）。
-        <div className="flex items-center gap-x-4 gap-y-1 py-1 pl-1 pr-1 lg:grid lg:grid-cols-3 lg:gap-x-[var(--gap-columns)]">
-          <span onDoubleClick={handleStartEdit} className={`${titleClass} min-w-0 flex-1 text-sm lg:flex-none`}>
-            {task.title}
-          </span>
-          <span className="shrink-0 text-xs text-muted">{categoryControl}</span>
-          <span className="flex shrink-0 items-center gap-3 text-xs text-muted lg:justify-between">
-            <span className="num hidden sm:inline">{formatDate(task.createdAt)}</span>
-            <ActionMenu items={menuItems} />
-          </span>
-        </div>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule px-4 py-2 text-xs text-muted">
@@ -205,8 +188,8 @@ export default function TaskCard({
             {age && <span className="num">{age}</span>}
             <span className="num ml-auto">{formatDate(task.createdAt)}</span>
           </div>
-          <div className="flex items-start gap-2 py-3 pl-4 pr-2">
-            <span onDoubleClick={handleStartEdit} className={`${titleClass} min-w-0 flex-1 pt-1 text-base`}>
+          <div className="flex items-start gap-2 py-2 pl-4 pr-2">
+            <span onDoubleClick={handleStartEdit} className={`${titleClass} min-w-0 flex-1 pt-[7px] text-base`}>
               {task.title}
             </span>
             <ActionMenu items={menuItems} />

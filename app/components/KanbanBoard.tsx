@@ -211,31 +211,14 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
             ))}
           </div>
         ) : (
-          <>
-            {/* 作業中の3列は広く使い、完了は下に、画面幅いっぱいの台帳として置く。 */}
-            <div className="grid items-start gap-x-[var(--gap-columns)] gap-y-8 md:grid-cols-2 lg:grid-cols-3">
-              {laneOf("TODO")}
-              {laneOf("IN_PROGRESS")}
-              {laneOf("PENDING")}
-            </div>
+          <div className="grid items-start gap-x-[var(--gap-columns)] gap-y-8 md:grid-cols-2 lg:grid-cols-4">
+            {laneOf("TODO")}
+            {laneOf("IN_PROGRESS")}
+            {laneOf("PENDING")}
             {laneOf("DONE")}
-          </>
+          </div>
         )}
       </main>
-
-      {dragging && tasks.find((t) => t.id === dragging.id)?.status !== "DONE" && (
-        // 完了は画面の下にあることが多いので、ドラッグ中だけ、画面の下に落とし先を出す。
-        <div
-          onDragOver={(e) => dragHandlers.handleDragOverLane(e, "DONE")}
-          onDragLeave={dragHandlers.handleDragLeaveLane}
-          onDrop={(e) => dragHandlers.handleDropLane(e, "DONE")}
-          className={`fixed inset-x-0 bottom-0 z-[var(--z-toast)] border-t-2 border-ink px-[var(--gutter)] py-5 text-center text-sm font-medium ${
-            draggedOverLane === "DONE" ? "bg-accent-soft" : "bg-plate"
-          }`}
-        >
-          ここに落として完了にする
-        </div>
-      )}
 
       {pendingDelete && <UndoBar title={pendingDelete.title} onUndo={undoDelete} />}
 
