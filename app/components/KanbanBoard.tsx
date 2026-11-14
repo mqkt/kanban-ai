@@ -114,7 +114,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
   };
 
   return (
-    <div className="min-h-screen bg-paper text-ink">
+    <div className="flex min-h-screen flex-col bg-paper text-ink">
       <BoardHeader
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
@@ -123,7 +123,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
         userImage={userImage}
       />
 
-      <main className="mx-auto flex w-full max-w-[var(--container)] flex-col gap-8 px-[var(--gutter)] py-6">
+      <main className="mx-auto flex w-full max-w-[var(--container)] flex-1 flex-col gap-8 px-[var(--gutter)] py-6">
         {loadError && (
           <p role="alert" className="border-2 border-error bg-plate px-4 py-3 text-sm text-error">
             {loadError}
