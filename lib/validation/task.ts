@@ -33,6 +33,8 @@ export const updateTaskSchema = z.object({
   title: taskTitleSchema.optional(),
   status: taskStatusSchema.optional(),
   category: taskCategorySchema.optional(),
+  // 同じ列の中での並び順。null で「並べ替えていない状態」に戻す。
+  position: z.number().int().min(0).max(100000).nullable().optional(),
 });
 
 export const deleteTaskSchema = z.union([

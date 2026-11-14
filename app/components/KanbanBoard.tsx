@@ -7,6 +7,7 @@ import { LaneConfig, TaskStatus, TASK_STATUS_LABELS, TASK_STATUS_ORDER } from ".
 import BoardHeader from "./BoardHeader";
 import TaskForm from "./TaskForm";
 import KanbanLane from "./KanbanLane";
+import { sortForLane } from "@/lib/taskOrder";
 import { DuplicateButton, DuplicateResults } from "./DuplicatePanel";
 import AboutSection from "./AboutSection";
 import UndoBar from "./UndoBar";
@@ -30,6 +31,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
     undoDelete,
     pendingDelete,
     updateTaskStatus,
+    placeTask,
     updateTaskCategory,
     editTaskTitle,
     mergeTasks,
@@ -86,10 +88,10 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
 
   const laneOf = (id: TaskStatus) => {
     const lane = lanes.find((l) => l.id === id)!;
-    const laneTasks = tasks.filter(
+    const laneTasks = sortForLane(tasks.filter(
       (task) => task.status === id && (!categoryFilter || task.category === categoryFilter) &&
         (!query.trim() || normalize(task.title).includes(normalize(query)))
-    );
+    ));
     return (
       <KanbanLane
         key={id}
@@ -99,6 +101,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
         onDragOver={dragHandlers.handleDragOverLane}
         onDragLeave={dragHandlers.handleDragLeaveLane}
         onDrop={dragHandlers.handleDropLane}
+        onPlace={placeTask}
         deleteTask={deleteTask}
         updateTaskStatus={updateTaskStatus}
         updateTaskCategory={updateTaskCategory}

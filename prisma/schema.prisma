@@ -44,6 +44,8 @@ model Task {
   title     String
   status    TaskStatus @default(TODO)
   category  String?
+  // 同じ列の中での並び順。空欄は従来どおり作成日時の新しい順。並べ替えたときだけ、列の全カードに 0,1,2… を振り直す。
+  position  Int?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 

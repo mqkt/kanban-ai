@@ -180,6 +180,64 @@ describe("PATCH /api/tasks", () => {
 
     expect(response.status).toBe(200);
   });
+
+  it("saves a position, and returns it in the response", async () => {
+    txMock.task.updateMany.mockResolvedValue({ count: 1 });
+    txMock.task.findUniqueOrThrow.mockResolvedValue({ ...baseTask, position: 2 });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/tasks", {
+        method: "PATCH",
+        body: JSON.stringify({ id: "task-1", position: 2 }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(txMock.task.updateMany).toHaveBeenCalledWith({
+      where: { id: "task-1", userId: "user-1" },
+      data: { position: 2 },
+    });
+    expect((await response.json()).task.position).toBe(2);
+  });
+
+  it("clears the position with null, and leaves it alone when the key is absent", async () => {
+    txMock.task.updateMany.mockResolvedValue({ count: 1 });
+    txMock.task.findUniqueOrThrow.mockResolvedValue({ ...baseTask, position: null });
+
+    await PATCH(
+      new Request("http://localhost/api/tasks", {
+        method: "PATCH",
+        body: JSON.stringify({ id: "task-1", position: null }),
+      })
+    );
+    expect(txMock.task.updateMany).toHaveBeenLastCalledWith({
+      where: { id: "task-1", userId: "user-1" },
+      data: { position: null },
+    });
+
+    await PATCH(
+      new Request("http://localhost/api/tasks", {
+        method: "PATCH",
+        body: JSON.stringify({ id: "task-1", title: "新しい題" }),
+      })
+    );
+    expect(txMock.task.updateMany).toHaveBeenLastCalledWith({
+      where: { id: "task-1", userId: "user-1" },
+      data: { title: "新しい題" },
+    });
+  });
+
+  it("rejects a negative or fractional position", async () => {
+    for (const position of [-1, 1.5]) {
+      const response = await PATCH(
+        new Request("http://localhost/api/tasks", {
+          method: "PATCH",
+          body: JSON.stringify({ id: "task-1", position }),
+        })
+      );
+      expect(response.status).toBe(400);
+    }
+  });
 });
 
 describe("DELETE /api/tasks", () => {
