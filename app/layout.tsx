@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Syne, Onest, JetBrains_Mono, Zen_Kaku_Gothic_New } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
@@ -18,6 +18,14 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: { card: "summary_large_image" },
+};
+
+// スマホのアドレスバーを、ライトは紙色・ダークは墨に近い色に揃える。
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f1ea" },
+    { media: "(prefers-color-scheme: dark)", color: "#252321" },
+  ],
 };
 
 export default async function RootLayout({
