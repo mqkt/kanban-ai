@@ -41,12 +41,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="min-h-screen bg-paper text-ink">
       <SiteBar />
-      <div className="mx-auto max-w-md px-5 pt-16 pb-16">
+      <div className="mx-auto w-full max-w-[var(--container)] px-[var(--gutter)] pt-12 pb-24">
         <Link href="/" className="link-quiet text-sm">
           戻る
         </Link>
 
-        <h1 className="mt-8 text-3xl">ログイン</h1>
+        {/* ログインはテーマの「申込カード」: 白いプレートに黒の太い罫線とずらした影。 */}
+        <div className="mt-8 w-full max-w-md border-2 border-ink bg-plate p-8 shadow-card">
+        <h1 className="jp-text text-3xl">ログイン</h1>
         <p className="mt-3 text-sm leading-6 text-muted">
           {session?.user.isGuest
             ? "Googleでログインすると新しいアカウントになります。今のゲストのタスクは引き継がれません。"
@@ -84,6 +86,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </button>
           </form>
         )}
+        </div>
       </div>
     </main>
   );

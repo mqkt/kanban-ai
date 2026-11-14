@@ -5,6 +5,7 @@ import { Task, TaskStatus, TASK_STATUS_LABELS, TASK_STATUS_ORDER } from "../type
 import { STALE_THRESHOLD_MS } from "@/lib/constants";
 import { TASK_CATEGORIES } from "@/lib/validation/task";
 import CategoryMenu from "./CategoryMenu";
+import ActionMenu, { ActionItem } from "./ActionMenu";
 
 interface TaskCardProps {
   task: Task;
@@ -17,7 +18,19 @@ interface TaskCardProps {
   // 同じ列の中で1つ上・下へ動かす（キーボードでも使える並べ替え）。動かせない向きは渡さない。
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  // 完了の台帳用。プレートではなく、罫線で区切った1行として描く。
+  compact?: boolean;
 }
+
+// 「いま一番自然な1手」。メニューの先頭に置く。完了のカードには決めない。
+const PRIMARY_MOVE: Partial<Record<TaskStatus, TaskStatus>> = {
+  TODO: "IN_PROGRESS",
+  IN_PROGRESS: "DONE",
+  PENDING: "IN_PROGRESS",
+};
+
+const moveLabel = (status: TaskStatus) =>
+  status === "DONE" ? "完了にする" : `${TASK_STATUS_LABELS[status]}へ`;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -47,6 +60,7 @@ export default function TaskCard({
   onDragEnd,
   onMoveUp,
   onMoveDown,
+  compact = false,
 }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingTitle, setEditingTitle] = useState("");
@@ -79,12 +93,6 @@ export default function TaskCard({
   const days = task.updatedAt !== undefined ? Math.max(0, Math.floor((now - task.updatedAt) / DAY_MS)) : 0;
   const age = task.updatedAt !== undefined ? ageLabel(task.status, days) : null;
 
-  const currentStatusIndex = TASK_STATUS_ORDER.indexOf(task.status);
-  const previousStatus = currentStatusIndex > 0 ? TASK_STATUS_ORDER[currentStatusIndex - 1] : null;
-  const nextStatus =
-    currentStatusIndex !== -1 && currentStatusIndex < TASK_STATUS_ORDER.length - 1
-      ? TASK_STATUS_ORDER[currentStatusIndex + 1]
-      : null;
 
   const categoryControl = task.error ? (
     <span
@@ -110,45 +118,26 @@ export default function TaskCard({
     </span>
   );
 
-  const act = "link-quiet";
-  // 操作は2段に分ける。1段目は「このカードをどうするか」、2段目は「どの列へ移すか」。
-  // 狭い列でも、行の途中で折り返さず、段ごとに収まる。
-  const actions = (
-    <div className="flex flex-col gap-y-1">
-      <div className="flex gap-x-3">
-        <button onClick={handleStartEdit} className={act}>
-          編集
-        </button>
-        <button onClick={() => deleteTask(task.id)} className={`${act} hover:!text-error`}>
-          削除
-        </button>
-        {onMoveUp && (
-          <button onClick={onMoveUp} className={act}>
-            上へ
-          </button>
-        )}
-        {onMoveDown && (
-          <button onClick={onMoveDown} className={act}>
-            下へ
-          </button>
-        )}
-      </div>
-      {(previousStatus || nextStatus) && (
-        <div className="flex gap-x-3">
-          {previousStatus && (
-            <button onClick={() => updateTaskStatus(task.id, previousStatus)} className={act}>
-              {TASK_STATUS_LABELS[previousStatus]}へ
-            </button>
-          )}
-          {nextStatus && (
-            <button onClick={() => updateTaskStatus(task.id, nextStatus)} className={act}>
-              {TASK_STATUS_LABELS[nextStatus]}へ
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  // 操作はすべて「⋯」メニューに入れ、カードの上には出さない（常に6つ並ぶと多すぎるため）。
+  // 並びは使う順: まず「いま一番自然な1手」、次に他の列、そのあと編集・並べ替え、最後に削除。
+  // 列の移動と並べ替えは、マウスならドラッグでもできる（メニューはキーボード・タッチ用でもある）。
+  const primaryStatus = PRIMARY_MOVE[task.status];
+  const moveTargets = [
+    ...(primaryStatus ? [primaryStatus] : []),
+    ...TASK_STATUS_ORDER.filter((st) => st !== task.status && st !== primaryStatus),
+  ];
+
+  const menuItems: ActionItem[] = [
+    ...moveTargets.map((st) => ({
+      label: moveLabel(st),
+      onSelect: () => updateTaskStatus(task.id, st),
+      strong: st === primaryStatus,
+    })),
+    { label: "編集", onSelect: handleStartEdit },
+    ...(onMoveUp ? [{ label: "上へ", onSelect: onMoveUp }] : []),
+    ...(onMoveDown ? [{ label: "下へ", onSelect: onMoveDown }] : []),
+    { label: "削除", onSelect: () => deleteTask(task.id), danger: true },
+  ];
 
   const editor = (
     <div className="flex flex-col gap-2 p-4">
@@ -178,7 +167,7 @@ export default function TaskCard({
     </div>
   );
 
-  const titleClass = `block select-none break-all font-medium leading-snug ${
+  const titleClass = `block select-none jp-text font-medium leading-snug ${
     task.status === "DONE" ? "text-muted line-through" : ""
   }`;
 
@@ -188,10 +177,26 @@ export default function TaskCard({
       draggable={!isEditing}
       onDragStart={(e) => onDragStart(e, task.id)}
       onDragEnd={(e) => onDragEnd(e, task.id)}
-      className={`group cursor-grab border-2 border-ink bg-plate transition-shadow duration-[var(--dur-micro)] hover:shadow-card-hover active:cursor-grabbing shadow-card`}
+      className={
+        compact
+          ? "group cursor-grab border-b border-rule transition-colors duration-[var(--dur-micro)] hover:bg-accent-soft active:cursor-grabbing"
+          : "group cursor-grab border-2 border-ink bg-plate transition-shadow duration-[var(--dur-micro)] hover:shadow-card-hover active:cursor-grabbing shadow-card"
+      }
     >
       {isEditing ? (
         editor
+      ) : compact ? (
+        // 広い画面では、上の3列と同じ位置に項目をそろえる（タイトル / カテゴリ / 日時と「⋯」）。
+        <div className="flex items-center gap-x-4 gap-y-1 py-1 pl-1 pr-1 lg:grid lg:grid-cols-3 lg:gap-x-[var(--gap-columns)]">
+          <span onDoubleClick={handleStartEdit} className={`${titleClass} min-w-0 flex-1 text-sm lg:flex-none`}>
+            {task.title}
+          </span>
+          <span className="shrink-0 text-xs text-muted">{categoryControl}</span>
+          <span className="flex shrink-0 items-center gap-3 text-xs text-muted lg:justify-between">
+            <span className="num hidden sm:inline">{formatDate(task.createdAt)}</span>
+            <ActionMenu items={menuItems} />
+          </span>
+        </div>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule px-4 py-2 text-xs text-muted">
@@ -200,13 +205,11 @@ export default function TaskCard({
             {age && <span className="num">{age}</span>}
             <span className="num ml-auto">{formatDate(task.createdAt)}</span>
           </div>
-          <div className="px-4 pt-4 pb-3">
-            <span onDoubleClick={handleStartEdit} className={`${titleClass} text-base`}>
+          <div className="flex items-start gap-2 py-3 pl-4 pr-2">
+            <span onDoubleClick={handleStartEdit} className={`${titleClass} min-w-0 flex-1 pt-1 text-base`}>
               {task.title}
             </span>
-          </div>
-          <div className="px-4 pb-4 text-sm">
-            {actions}
+            <ActionMenu items={menuItems} />
           </div>
         </>
       )}

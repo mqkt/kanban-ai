@@ -21,7 +21,7 @@ export default function InlineConfirm({
       }}
       className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm"
     >
-      <span className="break-all">{message}</span>
+      <span className="jp-text">{message}</span>
       <button
         type="button"
         onClick={onConfirm}

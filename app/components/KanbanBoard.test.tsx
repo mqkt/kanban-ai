@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import KanbanBoard from "./KanbanBoard";
 
@@ -110,6 +110,53 @@ describe("KanbanBoard category filter", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("サーバーに接続できません");
 
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps the drop slot while the pointer moves between elements inside a lane, and clears it only when it really leaves", async () => {
+    const tasks = [
+      makeTask("a", "資料を読む", "仕事"),
+      makeTask("b", "メールを返す", "仕事"),
+      makeTask("c", "部屋を片付ける", "家事"),
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ tasks, nextCursor: null }) })
+    );
+
+    const { container } = render(<KanbanBoard isGuest={false} userName="テストユーザー" userImage={null} />);
+    await waitFor(() => expect(screen.getByText("資料を読む")).toBeInTheDocument());
+
+    const slot = () => container.querySelector('div[aria-hidden="true"][class*="border-dashed"]');
+    const dataTransfer = { setData: vi.fn(), getData: vi.fn(), effectAllowed: "move" };
+    const card = container.querySelector("#card-a") as HTMLElement;
+    const lane = card.closest("section") as HTMLElement;
+    const title = screen.getByText("メールを返す");
+    const otherCard = container.querySelector("#card-b") as HTMLElement;
+
+    vi.useFakeTimers();
+    fireEvent.dragStart(card, { dataTransfer });
+    act(() => {
+      vi.advanceTimersByTime(10);
+    });
+    fireEvent.dragOver(lane, { dataTransfer, clientY: 10 });
+    expect(slot()).not.toBeNull();
+
+    // 列の中で、タイトルからカードの枠へ移っただけ。枠は消えてはいけない。
+    // （jsdom は relatedTarget を受け取らないので、イベントへ直接設定する）
+    const dragLeave = (el: Element, relatedTarget: Element | null) => {
+      const ev = createEvent.dragLeave(el, { dataTransfer });
+      Object.defineProperty(ev, "relatedTarget", { value: relatedTarget });
+      fireEvent(el, ev);
+    };
+    dragLeave(title, otherCard);
+    expect(slot()).not.toBeNull();
+
+    // 列の外へ出たとき。枠は消える。
+    dragLeave(lane, document.body);
+    expect(slot()).toBeNull();
+
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 });
