@@ -111,41 +111,43 @@ export default function TaskCard({
   );
 
   const act = "link-quiet";
+  // 操作は2段に分ける。1段目は「このカードをどうするか」、2段目は「どの列へ移すか」。
+  // 狭い列でも、行の途中で折り返さず、段ごとに収まる。
   const actions = (
-    <>
-      <button onClick={handleStartEdit} className={act}>
-        編集
-      </button>
-      <button onClick={() => deleteTask(task.id)} className={`${act} hover:!text-error`}>
-        削除
-      </button>
-      {onMoveUp && (
-        <button onClick={onMoveUp} className={act}>
-          上へ
+    <div className="flex flex-col gap-y-1">
+      <div className="flex gap-x-3">
+        <button onClick={handleStartEdit} className={act}>
+          編集
         </button>
-      )}
-      {onMoveDown && (
-        <button onClick={onMoveDown} className={act}>
-          下へ
+        <button onClick={() => deleteTask(task.id)} className={`${act} hover:!text-error`}>
+          削除
         </button>
+        {onMoveUp && (
+          <button onClick={onMoveUp} className={act}>
+            上へ
+          </button>
+        )}
+        {onMoveDown && (
+          <button onClick={onMoveDown} className={act}>
+            下へ
+          </button>
+        )}
+      </div>
+      {(previousStatus || nextStatus) && (
+        <div className="flex gap-x-3">
+          {previousStatus && (
+            <button onClick={() => updateTaskStatus(task.id, previousStatus)} className={act}>
+              {TASK_STATUS_LABELS[previousStatus]}へ
+            </button>
+          )}
+          {nextStatus && (
+            <button onClick={() => updateTaskStatus(task.id, nextStatus)} className={act}>
+              {TASK_STATUS_LABELS[nextStatus]}へ
+            </button>
+          )}
+        </div>
       )}
-      {previousStatus && (
-        <button
-          onClick={() => updateTaskStatus(task.id, previousStatus)}
-          className={act}
-        >
-          {TASK_STATUS_LABELS[previousStatus]}へ
-        </button>
-      )}
-      {nextStatus && (
-        <button
-          onClick={() => updateTaskStatus(task.id, nextStatus)}
-          className={act}
-        >
-          {TASK_STATUS_LABELS[nextStatus]}へ
-        </button>
-      )}
-    </>
+    </div>
   );
 
   const editor = (
@@ -205,7 +207,7 @@ export default function TaskCard({
               {task.title}
             </span>
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 px-4 pb-4 text-sm">
+          <div className="px-4 pb-4 text-sm">
             {actions}
           </div>
         </>
