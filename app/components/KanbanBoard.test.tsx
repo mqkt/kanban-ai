@@ -84,4 +84,32 @@ describe("KanbanBoard category filter", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("shows a busy skeleton while the tasks are loading", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+
+    const { container } = render(<KanbanBoard isGuest={false} userName="テストユーザー" userImage={null} />);
+
+    await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
+    expect(screen.getByText("読み込み中…")).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the error message in an alert when loading the tasks fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: "サーバーに接続できません" }),
+      })
+    );
+
+    render(<KanbanBoard isGuest={false} userName="テストユーザー" userImage={null} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("サーバーに接続できません");
+
+    vi.unstubAllGlobals();
+  });
 });
