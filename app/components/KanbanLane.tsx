@@ -49,7 +49,6 @@ export default function KanbanLane({
   onDragEnd,
   onClearCompleted,
 }: KanbanLaneProps) {
-  const isDone = lane.id === "DONE";
   const [confirmingClear, setConfirmingClear] = useState(false);
   // ドラッグ中の挿入位置。string = そのカードの手前、null = 末尾、undefined = 表示なし。
   const [insertBefore, setInsertBefore] = useState<string | null | undefined>(undefined);
@@ -99,14 +98,12 @@ export default function KanbanLane({
         onDrop(e, lane.id, before);
       }}
     >
-      <h2
-        className="flex max-w-none items-baseline gap-3 border-t-2 border-ink pt-2"
-      >
+      <h2 className="flex items-baseline gap-3 border-t-2 border-ink pt-2">
         <span className="font-display text-2xl font-bold leading-none">{lane.title}</span>
         <span className="num text-sm font-normal text-muted">{tasks.length}件</span>
       </h2>
 
-      {isDone && tasks.length > 0 && onClearCompleted && (
+      {tasks.length > 0 && onClearCompleted && (
         <div className="mt-2">
           {confirmingClear ? (
             <InlineConfirm
@@ -131,7 +128,7 @@ export default function KanbanLane({
           isDraggedOver && dragging ? (
             slot
           ) : (
-          <p className="border border-ink/30 px-3 py-6 text-sm text-muted">{lane.title}のタスクはありません</p>
+            <p className="border border-ink/30 px-3 py-6 text-sm text-muted">{lane.title}のタスクはありません</p>
           )
         ) : (
           <>

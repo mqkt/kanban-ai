@@ -42,7 +42,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <main className="min-h-screen bg-paper text-ink">
       <SiteBar />
       <div className="mx-auto w-full max-w-[var(--container)] px-[var(--gutter)] pt-8 pb-24">
-        <Link href="/" className="link-quiet -ml-1 inline-flex min-h-11 items-center px-1 text-base">
+        <Link href="/" className="link-quiet inline-flex min-h-11 items-center text-base">
           戻る
         </Link>
 

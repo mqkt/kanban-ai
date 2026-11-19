@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
+// 色は app/tokens.css の --color-paper（ライト・ダーク）を hex に直した値。viewport は CSS 変数を読めないため手で揃える。
 // スマホのアドレスバーを、ライトは紙色・ダークは墨に近い色に揃える。
 export const viewport: Viewport = {
   themeColor: [
