@@ -200,7 +200,7 @@ export default function KanbanBoard({ isGuest, userName, userImage }: KanbanBoar
         </section>
 
         {isLoading ? (
-          <div aria-busy="true" className="grid gap-[var(--gap-columns)] md:grid-cols-2 xl:grid-cols-4">
+          <div aria-busy="true" className="grid gap-[var(--gap-columns)] md:grid-cols-2 lg:grid-cols-4">
             <p className="sr-only">読み込み中…</p>
             {lanes.map((lane) => (
               <div key={lane.id} aria-hidden="true" className="flex flex-col gap-3">
