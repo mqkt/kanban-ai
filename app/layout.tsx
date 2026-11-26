@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Syne, Onest, JetBrains_Mono, Zen_Kaku_Gothic_New } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
+import { THEME_COLOR } from "@/lib/themeColor";
 
 const syne = Syne({ variable: "--font-syne", subsets: ["latin"], weight: "700", display: "swap" });
 const onest = Onest({ variable: "--font-onest", subsets: ["latin"], weight: ["400", "500"], display: "swap" });
@@ -20,12 +21,12 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-// 色は app/tokens.css の --color-paper（ライト・ダーク）を hex に直した値。viewport は CSS 変数を読めないため手で揃える。
-// スマホのアドレスバーを、ライトは紙色・ダークは墨に近い色に揃える。
+// スマホのアドレスバーを、ライトは紙色・ダークは墨に近い色に揃える（初期値はOSの設定で決まる。
+// アプリ内で切り替えたときの追従は lib/themeColor.ts の syncThemeColor）。
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f1ea" },
-    { media: "(prefers-color-scheme: dark)", color: "#252321" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
   ],
 };
 

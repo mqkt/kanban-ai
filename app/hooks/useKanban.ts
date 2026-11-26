@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Task, TaskStatus } from "../types/kanban";
 import { planReorder } from "@/lib/taskOrder";
+import { syncThemeColor } from "@/lib/themeColor";
 
 type TaskPatch = Partial<
   Pick<Task, "title" | "status">
@@ -83,6 +84,7 @@ export function useKanban() {
     } else {
       document.documentElement.classList.remove("dark");
     }
+    syncThemeColor(isDarkMode);
   }, [isDarkMode, isMounted]);
 
   const patchTask = async (id: string, patch: TaskPatch) => {
