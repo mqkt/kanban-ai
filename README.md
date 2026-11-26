@@ -1,6 +1,6 @@
 # Kanban Dashboard
 
-AI がカテゴリを付け、重複タスクも探してくれる、Next.js 製のかんばんボードです。
+AI がカテゴリを付け、重複タスクも探してくれる、Next.js 製のタスク管理アプリです。
 
 **[デプロイ済みアプリを試す](https://nextjs-app-ta5aoszrnq-an.a.run.app)** — アクセスするとゲストセッションが始まり、登録なしですぐ試せます（Googleログインにも対応）。
 
