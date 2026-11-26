@@ -7,12 +7,14 @@ name: Google Cloud デプロイ自動化 (CD)
 # 自動的にアプリをビルドして Google Cloud の Cloud Run へ更新デプロイを行うための設定です。
 # ------------------------------------------------------------------------------
 
-# 発火条件: 「main」または「master」ブランチにコードがプッシュされたときに起動します
+# 発火条件: 「main」または「master」への push で走ったCIが「成功」で終わったときに起動します。
+# push で直接起動すると、CI（テスト・ビルド）が落ちていても本番に出てしまうため、
+# CIの完了を待つ workflow_run にしています。
 on:
-  push:
-    branches:
-      - main
-      - master
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main, master]
 
 # Workload Identity（パスワードレス認証）を使用するために必要なアクセス権限の設定です
 permissions:
@@ -33,15 +35,50 @@ env:
   APP_NAME: nextjs-app
   REPOSITORY_NAME: nextjs-app-repo
 
+# 同時に2つのデプロイが走って、古い方が後から本番を上書きしないようにします
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 jobs:
+  # CIが成功した push で、かつ、そのコミットがいまの main の先頭であるときだけデプロイします。
+  # CIの再実行などで古いコミットのCIが後から成功しても、本番が古い版に戻らないようにするためです。
+  gate:
+    name: デプロイしてよいか確認
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          LATEST=$(gh api "repos/${{ github.repository }}/commits/${HEAD_BRANCH}" --jq .sha)
+          if [ "$RUN_EVENT" = "push" ] && [ "$CONCLUSION" = "success" ] && [ "$HEAD_SHA" = "$LATEST" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "デプロイを見送ります: event=$RUN_EVENT conclusion=$CONCLUSION sha=$HEAD_SHA latest=$LATEST"
+          fi
+
   deploy:
     name: アプリのビルドとCloud Runへの自動デプロイ
+    needs: gate
+    if: needs.gate.outputs.ok == 'true'
     runs-on: ubuntu-latest
 
     steps:
-      # 1. GitHub上のソースコードを取得します
+      # 1. CIが成功したコミットのソースコードを取得します
       - name: リポジトリのコードを取得
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       # 2. Workload Identity を利用して Google Cloud に安全にログインします
       # （パスワードキーを使用しないキーレス認証のため、非常に安全です）
@@ -65,7 +102,7 @@ jobs:
       - name: Docker イメージのビルドとプッシュ
         id: build
         run: |
-          IMAGE_TAG="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.APP_NAME }}:${{ github.sha }}"
+          IMAGE_TAG="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.APP_NAME }}:${{ github.event.workflow_run.head_sha }}"
           IMAGE_LATEST="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.APP_NAME }}:latest"
 
           # イメージのビルド
